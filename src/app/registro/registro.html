@@ -1,0 +1,451 @@
+<main class="registration-page">
+
+  <section class="registration-form-container">
+
+    <header class="form-header">
+
+      <div
+        class="form-header__decor form-header__decor--1"
+        aria-hidden="true">
+      </div>
+
+      <div
+        class="form-header__decor form-header__decor--2"
+        aria-hidden="true">
+      </div>
+
+      <h1 class="form-title">
+        Formulario de Registro
+      </h1>
+
+      <p class="form-subtitle">
+        Completa tus datos para crear tu cuenta y comenzar.
+      </p>
+
+    </header>
+
+
+    <form
+      class="registration-form"
+      #registrationForm="ngForm"
+      (ngSubmit)="onSubmit(registrationForm)"
+      novalidate
+    >
+
+      <p class="required-note">
+        Los campos marcados con * son obligatorios.
+      </p>
+
+
+      <div class="form-grid">
+
+        <!-- ==================== NOMBRE ==================== -->
+
+        <div class="field">
+
+          <label
+            for="first-name"
+            class="visually-hidden">
+            Nombre
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            👤
+          </span>
+
+          <input
+            id="first-name"
+            name="firstName"
+            type="text"
+            class="form-control"
+            placeholder="Nombre *"
+            autocomplete="given-name"
+            minlength="2"
+            maxlength="80"
+            required
+            [(ngModel)]="model.nombre"
+            #firstName="ngModel"
+          />
+
+          <small
+            class="field-error"
+            *ngIf="submitted && firstName.invalid"
+          >
+            Ingresa tu nombre.
+          </small>
+
+        </div>
+
+
+        <!-- ==================== PRIMER APELLIDO ==================== -->
+
+        <div class="field">
+
+          <label
+            for="last-name"
+            class="visually-hidden">
+            Primer Apellido
+          </label>
+
+          <input
+            id="last-name"
+            name="lastName"
+            type="text"
+            class="form-control"
+            placeholder="Primer Apellido *"
+            autocomplete="family-name"
+            minlength="2"
+            maxlength="80"
+            required
+            [(ngModel)]="model.primerApellido"
+            #lastName="ngModel"
+          />
+
+          <small
+            class="field-error"
+            *ngIf="submitted && lastName.invalid"
+          >
+            Ingresa tu primer apellido.
+          </small>
+
+        </div>
+
+
+        <!-- ==================== SEGUNDO APELLIDO ==================== -->
+
+        <div class="field">
+
+          <label
+            for="second-last-name"
+            class="visually-hidden">
+            Segundo Apellido
+          </label>
+
+          <input
+            id="second-last-name"
+            name="secondLastName"
+            type="text"
+            class="form-control"
+            placeholder="Segundo Apellido"
+            autocomplete="additional-name"
+            maxlength="80"
+            [(ngModel)]="model.segundoApellido"
+          />
+
+        </div>
+
+
+        <!-- ==================== TELÉFONO ==================== -->
+
+        <div class="field">
+
+          <label
+            for="phone"
+            class="visually-hidden">
+            Número de Teléfono
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            📞
+          </span>
+
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            inputmode="tel"
+            class="form-control"
+            placeholder="Número de Teléfono *"
+            autocomplete="tel"
+            pattern="^[0-9+\s-]{10,15}$"
+            required
+            [(ngModel)]="model.telefono"
+            #phone="ngModel"
+          />
+
+          <small
+            class="field-error"
+            *ngIf="submitted && phone.invalid"
+          >
+            Ingresa un teléfono válido.
+          </small>
+
+        </div>
+
+
+        <!-- ==================== CÓDIGO POSTAL ==================== -->
+
+        <div class="field">
+
+          <label
+            for="codigo-postal"
+            class="visually-hidden">
+            Código Postal
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            📮
+          </span>
+
+          <input
+            id="codigo-postal"
+            name="codigoPostal"
+            type="text"
+            inputmode="numeric"
+            maxlength="5"
+            pattern="[0-9]{5}"
+            class="form-control"
+            placeholder="Código Postal *"
+            autocomplete="postal-code"
+            required
+            [(ngModel)]="model.codigoPostal"
+            (blur)="onCodigoPostalChange()"
+            #codigoPostal="ngModel"
+          />
+
+
+          <!-- Indicador mientras consulta el código postal -->
+
+          <span
+            class="field-spinner"
+            *ngIf="cpLoading"
+            aria-hidden="true">
+          </span>
+
+
+          <!-- Error de formato -->
+
+          <small
+            class="field-error"
+            *ngIf="submitted && codigoPostal.invalid"
+          >
+            Ingresa un código postal válido de 5 dígitos.
+          </small>
+
+
+          <!-- Error al consultar Spring/Postalia -->
+
+          <small
+            class="field-error"
+            *ngIf="cpError"
+          >
+            {{ cpError }}
+          </small>
+
+        </div>
+
+
+        <!-- ==================== ESTADO ==================== -->
+
+        <div class="field">
+
+          <label
+            for="state"
+            class="visually-hidden">
+            Estado
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            📍
+          </span>
+
+          <input
+            id="state"
+            name="state"
+            type="text"
+            class="form-control"
+            placeholder="Estado *"
+            readonly
+            required
+            [(ngModel)]="model.estado"
+            #state="ngModel"
+          />
+
+          <small
+            class="field-error"
+            *ngIf="submitted && state.invalid"
+          >
+            Ingresa un código postal válido para obtener el estado.
+          </small>
+
+        </div>
+
+
+        <!-- ==================== MUNICIPIO ==================== -->
+
+        <div class="field">
+
+          <label
+            for="municipality"
+            class="visually-hidden">
+            Municipio
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            🗺️
+          </span>
+
+          <input
+            id="municipality"
+            name="municipality"
+            type="text"
+            class="form-control"
+            placeholder="Municipio *"
+            readonly
+            required
+            [(ngModel)]="model.municipio"
+            #municipality="ngModel"
+          />
+
+          <small
+            class="field-error"
+            *ngIf="submitted && municipality.invalid"
+          >
+            Ingresa un código postal válido para obtener el municipio.
+          </small>
+
+        </div>
+
+
+        <!-- ==================== DIRECCIÓN ==================== -->
+
+        <div class="field full-width">
+
+          <label
+            for="address"
+            class="visually-hidden">
+            Dirección
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            🏠
+          </span>
+
+          <input
+            id="address"
+            name="address"
+            type="text"
+            class="form-control"
+            placeholder="Dirección *"
+            autocomplete="street-address"
+            maxlength="150"
+            required
+            [(ngModel)]="model.direccion"
+            #address="ngModel"
+          />
+
+          <small
+            class="field-error"
+            *ngIf="submitted && address.invalid"
+          >
+            Ingresa tu dirección.
+          </small>
+
+        </div>
+
+
+        <!-- ==================== FECHA DE NACIMIENTO ==================== -->
+
+        <div class="field field--date">
+
+          <label
+            for="birth-date"
+            class="visually-hidden">
+            Fecha de Nacimiento
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            📅
+          </span>
+
+          <input
+            id="birth-date"
+            name="birthDate"
+            type="date"
+            class="form-control"
+            [max]="fechaMaxima"
+            required
+            [(ngModel)]="model.fechaNacimiento"
+            #birthDate="ngModel"
+          />
+
+          <small
+            class="field-error"
+            *ngIf="submitted && birthDate.invalid"
+          >
+            Selecciona tu fecha de nacimiento.
+          </small>
+
+        </div>
+
+
+        <!-- ==================== ANIMAL FAVORITO ==================== -->
+
+        <div class="field">
+
+          <label
+            for="favorite-animal"
+            class="visually-hidden">
+            Animal Favorito
+          </label>
+
+          <span
+            class="field-icon"
+            aria-hidden="true">
+            ♥
+          </span>
+
+          <input
+            id="favorite-animal"
+            name="favoriteAnimal"
+            type="text"
+            class="form-control"
+            placeholder="Animal Favorito"
+            maxlength="60"
+            [(ngModel)]="model.animalFavorito"
+          />
+
+        </div>
+
+      </div>
+
+
+      <!-- ==================== ERROR AL GUARDAR ==================== -->
+
+      <small
+        class="field-error"
+        *ngIf="saveError"
+      >
+        {{ saveError }}
+      </small>
+
+
+      <!-- ==================== BOTÓN ==================== -->
+
+      <button
+        type="submit"
+        class="submit-button"
+        [disabled]="saving"
+      >
+        {{ saving ? 'Guardando...' : 'Enviar Registro' }}
+      </button>
+
+    </form>
+
+  </section>
+
+</main>

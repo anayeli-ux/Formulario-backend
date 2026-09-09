@@ -1,0 +1,490 @@
+:host {
+  --color-primary: #4163ad;
+  --color-primary-hover: #35589f;
+  --color-primary-active: #2f4f92;
+
+  --color-header-start: #4163ad;
+  --color-header-end: #60739b;
+
+  --color-accent: #f07d68;
+  --color-background: #f7f8fa;
+  --color-surface: #ffffff;
+
+  --color-border: #d9e0ea;
+  --color-text-primary: #26364f;
+  --color-text-secondary: #98a3b2;
+  --color-text-on-primary: #ffffff;
+
+  --color-error: #d64545;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  display: block;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+
+/* =========================================================
+   ACCESIBILIDAD
+   ========================================================= */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+/* =========================================================
+   PÁGINA
+   ========================================================= */
+
+.registration-page {
+  min-height: 100vh;
+
+  background: var(--color-background);
+
+  padding: var(--space-6) var(--space-4);
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  box-sizing: border-box;
+}
+
+
+.registration-form-container {
+  width: 100%;
+  max-width: 620px;
+}
+
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
+
+.form-header {
+  position: relative;
+  overflow: hidden;
+
+  background: linear-gradient(
+    90deg,
+    var(--color-header-start) 0%,
+    #526aa2 55%,
+    var(--color-header-end) 100%
+  );
+
+  border-radius: 10px;
+
+  padding: var(--space-4) var(--space-5);
+
+  color: var(--color-text-on-primary);
+
+  margin-bottom: var(--space-6);
+}
+
+
+.form-header__decor {
+  position: absolute;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.1);
+
+  pointer-events: none;
+}
+
+
+.form-header__decor--1 {
+  width: 120px;
+  height: 120px;
+
+  top: -40px;
+  right: -20px;
+}
+
+
+.form-header__decor--2 {
+  width: 70px;
+  height: 70px;
+
+  bottom: -30px;
+  right: 60px;
+}
+
+
+.form-title {
+  position: relative;
+  z-index: 1;
+
+  margin: 0 0 4px;
+
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+
+.form-subtitle {
+  position: relative;
+  z-index: 1;
+
+  margin: 0;
+
+  font-size: 13px;
+  font-weight: 400;
+
+  opacity: 0.9;
+}
+
+
+/* =========================================================
+   FORMULARIO
+   ========================================================= */
+
+.registration-form {
+  width: 100%;
+}
+
+
+.required-note {
+  margin: 0 0 var(--space-3);
+
+  font-size: 12px;
+
+  color: var(--color-text-secondary);
+}
+
+
+.form-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  column-gap: var(--space-3);
+  row-gap: 24px;
+}
+
+
+/* =========================================================
+   CAMPOS
+   ========================================================= */
+
+.field {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  min-width: 0;
+}
+
+
+.field.full-width {
+  grid-column: 1 / -1;
+}
+
+
+/* Iconos */
+
+.field-icon {
+  position: absolute;
+
+  left: 11px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  font-size: 13px;
+
+  color: var(--color-accent);
+
+  pointer-events: none;
+
+  z-index: 2;
+}
+
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.form-control {
+  width: 100%;
+  height: 44px;
+
+  padding: 0 var(--space-3) 0 34px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+
+  background: var(--color-surface);
+
+  color: var(--color-text-primary);
+
+  font-size: 14px;
+  font-family: inherit;
+
+  box-sizing: border-box;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+
+.form-control::placeholder {
+  color: var(--color-text-secondary);
+
+  opacity: 1;
+}
+
+
+.form-control:focus {
+  outline: none;
+
+  border-color: var(--color-primary);
+
+  box-shadow: 0 0 0 3px rgba(65, 99, 173, 0.15);
+}
+
+
+/* Campos automáticos de Postalia */
+
+.form-control[readonly] {
+  background: #f8f9fb;
+
+  color: var(--color-text-primary);
+
+  cursor: default;
+}
+
+
+.form-control[readonly]:focus {
+  border-color: var(--color-border);
+
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   FECHA DE NACIMIENTO
+   ========================================================= */
+
+.field--date {
+  position: relative;
+}
+
+
+/*
+  El calendario es el calendario nativo del navegador.
+  Ya no necesitamos .calendar, .calendar__day, etc.
+*/
+
+input[type="date"].form-control {
+  padding-right: 10px;
+
+  color: var(--color-text-primary);
+
+  cursor: pointer;
+}
+
+
+input[type="date"].form-control::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+
+  opacity: 0.65;
+}
+
+
+/* =========================================================
+   ERRORES
+   ========================================================= */
+
+.field-error {
+  position: absolute;
+
+  left: 4px;
+  top: calc(100% + 4px);
+
+  font-size: 11px;
+  line-height: 1.2;
+
+  color: var(--color-error);
+}
+
+
+/* =========================================================
+   CÓDIGO POSTAL - LOADING
+   ========================================================= */
+
+.field-spinner {
+  position: absolute;
+
+  right: 11px;
+  top: 50%;
+
+  width: 14px;
+  height: 14px;
+
+  transform: translateY(-50%);
+
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+
+  border-radius: 50%;
+
+  animation: field-spinner-rotate 700ms linear infinite;
+}
+
+
+@keyframes field-spinner-rotate {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+
+/* =========================================================
+   BOTÓN
+   ========================================================= */
+
+.submit-button {
+  width: 100%;
+  height: 48px;
+
+  margin-top: var(--space-5);
+
+  border: none;
+  border-radius: 7px;
+
+  background: var(--color-primary);
+
+  color: var(--color-text-on-primary);
+
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  box-shadow: 0 3px 6px rgba(48, 75, 135, 0.2);
+
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+
+.submit-button:hover {
+  background: var(--color-primary-hover);
+}
+
+
+.submit-button:active {
+  background: var(--color-primary-active);
+
+  transform: translateY(1px);
+}
+
+
+.submit-button:focus-visible {
+  outline: 3px solid rgba(65, 99, 173, 0.35);
+
+  outline-offset: 2px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .registration-page {
+    padding: var(--space-4);
+  }
+
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .field.full-width {
+    grid-column: auto;
+  }
+
+
+  .form-header {
+    padding: var(--space-4);
+  }
+
+
+  .form-title {
+    font-size: 20px;
+  }
+}
+
+
+/* =========================================================
+   ACCESIBILIDAD - MENOS ANIMACIONES
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .form-control,
+  .submit-button {
+    transition: none;
+  }
+
+
+  .field-spinner {
+    animation-duration: 1.5s;
+  }
+}
+
+/* =========================================================
+   MENSAJE GENERAL DE ERROR AL GUARDAR
+   ========================================================= */
+
+.registration-form > .field-error {
+  position: static;
+  display: block;
+  margin-top: var(--space-4);
+  font-size: 12px;
+  text-align: center;
+  color: var(--color-error);
+}
+
+
+/* =========================================================
+   BOTÓN DESHABILITADO / GUARDANDO
+   ========================================================= */
+
+.submit-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.submit-button:disabled:hover {
+  background: var(--color-primary);
+}

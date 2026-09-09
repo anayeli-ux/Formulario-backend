@@ -1,0 +1,821 @@
+<div class="admin-page">
+
+  <!-- =========================
+       ENCABEZADO
+       ========================= -->
+  <header class="admin-header">
+
+    <div>
+      <h1>Administración de Usuarios</h1>
+
+      <p>
+        Crear, consultar, editar y eliminar registros
+      </p>
+    </div>
+
+    <button
+      class="logout"
+      type="button"
+      (click)="cerrarSesion()"
+    >
+      Cerrar sesión
+    </button>
+
+  </header>
+
+
+  <!-- =========================
+       FORMULARIO PARA CREAR USUARIO
+       ========================= -->
+  <section class="form-card">
+
+    <h2>Crear usuario</h2>
+
+    <form
+      class="user-form"
+      (ngSubmit)="crearUsuario()"
+    >
+
+      <!-- NOMBRE -->
+      <div class="field">
+
+        <label>Nombre</label>
+
+        <input
+          type="text"
+          name="nombre"
+          [(ngModel)]="usuarioFormulario.nombre"
+          required
+        >
+
+      </div>
+
+
+      <!-- PRIMER APELLIDO -->
+      <div class="field">
+
+        <label>Primer apellido</label>
+
+        <input
+          type="text"
+          name="primerApellido"
+          [(ngModel)]="usuarioFormulario.primerApellido"
+          required
+        >
+
+      </div>
+
+
+      <!-- SEGUNDO APELLIDO -->
+      <div class="field">
+
+        <label>Segundo apellido</label>
+
+        <input
+          type="text"
+          name="segundoApellido"
+          [(ngModel)]="usuarioFormulario.segundoApellido"
+        >
+
+      </div>
+
+
+      <!-- TELÉFONO -->
+      <div class="field">
+
+        <label>Teléfono</label>
+
+        <input
+          type="tel"
+          name="telefono"
+          maxlength="15"
+          [(ngModel)]="usuarioFormulario.telefono"
+        >
+
+      </div>
+
+
+      <!-- CÓDIGO POSTAL -->
+      <div class="field">
+
+        <label>Código postal</label>
+
+        <input
+          type="text"
+          name="codigoPostal"
+          maxlength="5"
+          [(ngModel)]="usuarioFormulario.codigoPostal"
+          (ngModelChange)="buscarCodigoPostal()"
+        >
+
+        <small *ngIf="cpLoading">
+          Consultando código postal...
+        </small>
+
+        <small *ngIf="cpError">
+          {{ cpError }}
+        </small>
+
+      </div>
+
+
+      <!-- ESTADO -->
+      <div class="field">
+
+        <label>Estado</label>
+
+        <input
+          type="text"
+          name="estado"
+          [(ngModel)]="usuarioFormulario.estado"
+          readonly
+        >
+
+      </div>
+
+
+      <!-- MUNICIPIO -->
+      <div class="field">
+
+        <label>Municipio</label>
+
+        <input
+          type="text"
+          name="municipio"
+          [(ngModel)]="usuarioFormulario.municipio"
+          readonly
+        >
+
+      </div>
+
+
+      <!-- DIRECCIÓN -->
+      <div class="field full">
+
+        <label>Dirección</label>
+
+        <input
+          type="text"
+          name="direccion"
+          [(ngModel)]="usuarioFormulario.direccion"
+        >
+
+      </div>
+
+
+      <!-- FECHA DE NACIMIENTO -->
+      <div class="field">
+
+        <label>Fecha de nacimiento</label>
+
+        <input
+          type="date"
+          name="fechaNacimiento"
+          [(ngModel)]="usuarioFormulario.fechaNacimiento"
+          [max]="fechaMaximaAdulto"
+          required
+        >
+
+        <small>
+          Debe tener al menos 18 años.
+        </small>
+
+      </div>
+
+
+      <!-- ANIMAL FAVORITO -->
+      <div class="field">
+
+        <label>Animal favorito</label>
+
+        <input
+          type="text"
+          name="animalFavorito"
+          [(ngModel)]="usuarioFormulario.animalFavorito"
+        >
+
+      </div>
+
+
+      <!-- BOTÓN CREAR -->
+      <div class="actions full">
+
+        <button
+          class="save"
+          type="submit"
+        >
+          Crear usuario
+        </button>
+
+      </div>
+
+    </form>
+
+  </section>
+
+
+  <!-- =========================
+       TABLA USUARIOS ACTIVOS
+       ========================= -->
+  <section class="table-card">
+
+    <div class="table-header">
+
+      <div>
+
+        <h2>
+          Usuarios registrados
+        </h2>
+
+        <!-- SIGNAL -->
+        <p>
+          Total: {{ totalUsuariosActivos() }}
+        </p>
+
+      </div>
+
+
+      <button
+        class="refresh"
+        type="button"
+        (click)="cargarUsuarios()"
+      >
+        Actualizar tabla
+      </button>
+
+    </div>
+
+
+    <div class="table-container">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>ID</th>
+
+            <th>Nombre</th>
+
+            <th>
+              Primer apellido
+            </th>
+
+            <th>
+              Segundo apellido
+            </th>
+
+            <th>Teléfono</th>
+
+            <th>CP</th>
+
+            <th>Estado</th>
+
+            <th>Municipio</th>
+
+            <th>Dirección</th>
+
+            <th>
+              Fecha nacimiento
+            </th>
+
+            <th>
+              Animal favorito
+            </th>
+
+            <th>Acciones</th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody>
+
+          <!-- SIGNAL -->
+          <tr
+            *ngFor="let usuario of usuarios()"
+          >
+
+            <td>
+              {{ usuario.id }}
+            </td>
+
+
+            <td>
+              {{ usuario.nombre }}
+            </td>
+
+
+            <td>
+              {{ usuario.primerApellido }}
+            </td>
+
+
+            <td>
+              {{ usuario.segundoApellido }}
+            </td>
+
+
+            <td>
+              {{ usuario.telefono }}
+            </td>
+
+
+            <td>
+              {{ usuario.codigoPostal }}
+            </td>
+
+
+            <td>
+              {{ usuario.estado }}
+            </td>
+
+
+            <td>
+              {{ usuario.municipio }}
+            </td>
+
+
+            <td>
+              {{ usuario.direccion }}
+            </td>
+
+
+            <td>
+              {{ usuario.fechaNacimiento }}
+            </td>
+
+
+            <td>
+              {{ usuario.animalFavorito }}
+            </td>
+
+
+            <td class="row-actions">
+
+              <!-- EDITAR -->
+              <button
+                class="edit"
+                type="button"
+                (click)="editarUsuario(usuario)"
+              >
+                Editar
+              </button>
+
+
+              <!-- ELIMINAR -->
+              <button
+                class="delete"
+                type="button"
+                (click)="eliminarUsuario(usuario.id!)"
+              >
+                Eliminar
+              </button>
+
+            </td>
+
+          </tr>
+
+
+          <!-- SIN USUARIOS ACTIVOS -->
+          <tr
+            *ngIf="usuarios().length === 0"
+          >
+
+            <td
+              colspan="12"
+              class="empty"
+            >
+              No existen usuarios registrados.
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       TABLA USUARIOS ELIMINADOS
+       ========================= -->
+  <section class="table-card">
+
+    <div class="table-header">
+
+      <div>
+
+        <h2>
+          Usuarios eliminados
+        </h2>
+
+        <!-- SIGNAL -->
+        <p>
+          Total: {{ totalUsuariosEliminados() }}
+        </p>
+
+      </div>
+
+
+      <button
+        class="refresh"
+        type="button"
+        (click)="cargarUsuariosEliminados()"
+      >
+        Actualizar tabla
+      </button>
+
+    </div>
+
+
+    <div class="table-container">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>ID</th>
+
+            <th>Nombre</th>
+
+            <th>
+              Primer apellido
+            </th>
+
+            <th>
+              Segundo apellido
+            </th>
+
+            <th>Teléfono</th>
+
+            <th>CP</th>
+
+            <th>Estado</th>
+
+            <th>Municipio</th>
+
+            <th>Dirección</th>
+
+            <th>
+              Fecha nacimiento
+            </th>
+
+            <th>
+              Animal favorito
+            </th>
+
+            <th>Estado</th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody>
+
+          <!-- SIGNAL -->
+          <tr
+            *ngFor="let usuario of usuariosEliminados()"
+          >
+
+            <td>
+              {{ usuario.id }}
+            </td>
+
+
+            <td>
+              {{ usuario.nombre }}
+            </td>
+
+
+            <td>
+              {{ usuario.primerApellido }}
+            </td>
+
+
+            <td>
+              {{ usuario.segundoApellido }}
+            </td>
+
+
+            <td>
+              {{ usuario.telefono }}
+            </td>
+
+
+            <td>
+              {{ usuario.codigoPostal }}
+            </td>
+
+
+            <td>
+              {{ usuario.estado }}
+            </td>
+
+
+            <td>
+              {{ usuario.municipio }}
+            </td>
+
+
+            <td>
+              {{ usuario.direccion }}
+            </td>
+
+
+            <td>
+              {{ usuario.fechaNacimiento }}
+            </td>
+
+
+            <td>
+              {{ usuario.animalFavorito }}
+            </td>
+
+
+            <td>
+              Eliminado
+            </td>
+
+          </tr>
+
+
+          <!-- SIN USUARIOS ELIMINADOS -->
+          <tr
+            *ngIf="usuariosEliminados().length === 0"
+          >
+
+            <td
+              colspan="12"
+              class="empty"
+            >
+              No existen usuarios eliminados.
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       MODAL DE EDICIÓN
+       ========================= -->
+  <div
+    class="modal-overlay"
+    *ngIf="modalEditarAbierto"
+  >
+
+    <div class="modal-card">
+
+
+      <!-- ENCABEZADO MODAL -->
+      <div class="modal-header">
+
+        <h2>
+          Editar usuario
+        </h2>
+
+
+        <button
+          type="button"
+          class="modal-close"
+          (click)="cerrarModalEditar()"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- FORMULARIO MODAL -->
+      <form
+        class="user-form"
+        (ngSubmit)="actualizarUsuario()"
+      >
+
+
+        <!-- NOMBRE -->
+        <div class="field">
+
+          <label>
+            Nombre
+          </label>
+
+          <input
+            type="text"
+            name="modalNombre"
+            [(ngModel)]="usuarioFormulario.nombre"
+            required
+          >
+
+        </div>
+
+
+        <!-- PRIMER APELLIDO -->
+        <div class="field">
+
+          <label>
+            Primer apellido
+          </label>
+
+          <input
+            type="text"
+            name="modalPrimerApellido"
+            [(ngModel)]="usuarioFormulario.primerApellido"
+            required
+          >
+
+        </div>
+
+
+        <!-- SEGUNDO APELLIDO -->
+        <div class="field">
+
+          <label>
+            Segundo apellido
+          </label>
+
+          <input
+            type="text"
+            name="modalSegundoApellido"
+            [(ngModel)]="usuarioFormulario.segundoApellido"
+          >
+
+        </div>
+
+
+        <!-- TELÉFONO -->
+        <div class="field">
+
+          <label>
+            Teléfono
+          </label>
+
+          <input
+            type="tel"
+            name="modalTelefono"
+            maxlength="15"
+            [(ngModel)]="usuarioFormulario.telefono"
+          >
+
+        </div>
+
+
+        <!-- CÓDIGO POSTAL -->
+        <div class="field">
+
+          <label>
+            Código postal
+          </label>
+
+          <input
+            type="text"
+            name="modalCodigoPostal"
+            maxlength="5"
+            [(ngModel)]="usuarioFormulario.codigoPostal"
+            (ngModelChange)="buscarCodigoPostal()"
+          >
+
+
+          <small *ngIf="cpLoading">
+            Consultando código postal...
+          </small>
+
+
+          <small *ngIf="cpError">
+            {{ cpError }}
+          </small>
+
+        </div>
+
+
+        <!-- ESTADO -->
+        <div class="field">
+
+          <label>
+            Estado
+          </label>
+
+          <input
+            type="text"
+            name="modalEstado"
+            [(ngModel)]="usuarioFormulario.estado"
+            readonly
+          >
+
+        </div>
+
+
+        <!-- MUNICIPIO -->
+        <div class="field">
+
+          <label>
+            Municipio
+          </label>
+
+          <input
+            type="text"
+            name="modalMunicipio"
+            [(ngModel)]="usuarioFormulario.municipio"
+            readonly
+          >
+
+        </div>
+
+
+        <!-- DIRECCIÓN -->
+        <div class="field full">
+
+          <label>
+            Dirección
+          </label>
+
+          <input
+            type="text"
+            name="modalDireccion"
+            [(ngModel)]="usuarioFormulario.direccion"
+          >
+
+        </div>
+
+
+        <!-- FECHA DE NACIMIENTO -->
+        <div class="field">
+
+          <label>
+            Fecha de nacimiento
+          </label>
+
+          <input
+            type="date"
+            name="modalFechaNacimiento"
+            [(ngModel)]="usuarioFormulario.fechaNacimiento"
+            [max]="fechaMaximaAdulto"
+            required
+          >
+
+          <small>
+            Debe tener al menos 18 años.
+          </small>
+
+        </div>
+
+
+        <!-- ANIMAL FAVORITO -->
+        <div class="field">
+
+          <label>
+            Animal favorito
+          </label>
+
+          <input
+            type="text"
+            name="modalAnimalFavorito"
+            [(ngModel)]="usuarioFormulario.animalFavorito"
+          >
+
+        </div>
+
+
+        <!-- BOTONES DEL MODAL -->
+        <div class="actions full">
+
+          <button
+            class="save"
+            type="submit"
+          >
+            Actualizar usuario
+          </button>
+
+
+          <button
+            class="cancel"
+            type="button"
+            (click)="cerrarModalEditar()"
+          >
+            Cancelar
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>

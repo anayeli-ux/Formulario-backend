@@ -1,0 +1,92 @@
+<div class="inicio-page">
+
+  <div class="login-card">
+
+    <div class="header">
+      <h1>Bienvenido</h1>
+      <p>Ingresa a tu cuenta para continuar</p>
+
+      <div class="circle circle-one"></div>
+      <div class="circle circle-two"></div>
+    </div>
+
+    <form (ngSubmit)="iniciarSesion()">
+
+      <div class="field">
+        <label for="usuario">Usuario</label>
+
+        <div class="input-container">
+          <span class="icon">👤</span>
+
+          <input
+            id="usuario"
+            type="text"
+            name="usuario"
+            [(ngModel)]="usuario"
+            placeholder="Ingresa tu usuario"
+            required
+          >
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Contraseña</label>
+
+        <div class="input-container">
+
+          <span class="icon">🔒</span>
+
+          <input
+            id="password"
+            [type]="mostrarPassword ? 'text' : 'password'"
+            name="password"
+            [(ngModel)]="password"
+            placeholder="Ingresa tu contraseña"
+            required
+          >
+
+          <button
+            class="show-password"
+            type="button"
+            (click)="mostrarPassword = !mostrarPassword"
+          >
+            {{ mostrarPassword ? '🙈' : '👁️' }}
+          </button>
+
+        </div>
+      </div>
+
+      <p
+        class="error"
+        *ngIf="mensajeError"
+      >
+        {{ mensajeError }}
+      </p>
+
+      <button
+        class="login-button"
+        type="submit"
+        [disabled]="cargando"
+      >
+        {{ cargando ? 'Ingresando...' : 'Iniciar sesión' }}
+      </button>
+
+    </form>
+
+    <div class="divider">
+      <span></span>
+      <p>¿No tienes cuenta?</p>
+      <span></span>
+    </div>
+
+    <button
+      class="register-button"
+      type="button"
+      (click)="irRegistro()"
+    >
+      Crear una cuenta
+    </button>
+
+  </div>
+
+</div>
