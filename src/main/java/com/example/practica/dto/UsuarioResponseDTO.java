@@ -1,6 +1,5 @@
-package com.example.practica.model;
+package com.example.practica.dto;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,31 +8,23 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "usuarios", schema = "public")
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Usuario {
+public class UsuarioResponseDTO {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String nombre;
 
-    @Column(name = "primer_apellido")
     private String primerApellido;
 
-    @Column(name = "segundo_apellido")
     private String segundoApellido;
 
     private String telefono;
 
-    @Column(name = "codigo_postal")
     private String codigoPostal;
 
     private String estado;
@@ -42,13 +33,9 @@ public class Usuario {
 
     private String direccion;
 
-    @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
 
-    @Column(name = "animal_favorito")
     private String animalFavorito;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean activo = true;
+    private boolean activo;
 }

@@ -1,23 +1,28 @@
 package com.example.practica.service;
 
-import com.example.practica.model.Usuario;
+import com.example.practica.dto.UsuarioRequestDTO;
+import com.example.practica.dto.UsuarioResponseDTO;
 
 import java.util.List;
 
 public interface UsuarioService {
 
-    List<Usuario> listarUsuarios();
+    List<UsuarioResponseDTO> listarUsuarios();
 
-    List<Usuario> listarUsuariosEliminados();
+    List<UsuarioResponseDTO> listarUsuariosEliminados();
 
-    Usuario buscarUsuario(Long id);
+    UsuarioResponseDTO buscarUsuario(Long id);
 
-    Usuario crearUsuario(Usuario usuario);
+    UsuarioResponseDTO crearUsuario(
+            UsuarioRequestDTO usuario
+    );
 
-    Usuario actualizarUsuario(
+    UsuarioResponseDTO actualizarUsuario(
             Long id,
-            Usuario usuario
+            UsuarioRequestDTO usuario
     );
 
     boolean eliminarUsuario(Long id);
+
+    UsuarioResponseDTO reactivarUsuario(Long id);
 }
