@@ -228,4 +228,33 @@ public class GlobalExceptionHandler {
 
         return body;
     }
+
+    @ExceptionHandler(EmailDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>>
+    manejarEmailDuplicado(
+            EmailDuplicadoException ex
+    ) {
+
+        Map<String, Object> respuesta =
+                new HashMap<>();
+
+        respuesta.put(
+                "timestamp",
+                LocalDateTime.now()
+        );
+
+        respuesta.put(
+                "status",
+                HttpStatus.CONFLICT.value()
+        );
+
+        respuesta.put(
+                "mensaje",
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(respuesta);
+    }
 }

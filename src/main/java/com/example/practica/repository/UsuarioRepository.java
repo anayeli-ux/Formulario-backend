@@ -11,15 +11,20 @@ import java.util.Optional;
 public interface UsuarioRepository
         extends JpaRepository<Usuario, Long> {
 
-    // Solo usuarios activos
     List<Usuario> findByActivoTrueOrderByIdAsc();
 
-    // Solo usuarios eliminados lógicamente
     List<Usuario> findByActivoFalseOrderByIdAsc();
 
-    // Buscar solamente si está activo
     Optional<Usuario> findByIdAndActivoTrue(Long id);
 
-    // Validar que el teléfono no esté repetido
     boolean existsByTelefono(String telefono);
+
+    boolean existsByEmail(String email);
+
+    Optional<Usuario> findByEmail(String email);
+
+    Optional<Usuario> findByEmailOrTelefono(
+            String email,
+            String telefono
+    );
 }

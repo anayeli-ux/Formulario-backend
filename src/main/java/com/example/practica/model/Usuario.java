@@ -28,9 +28,6 @@ public class Usuario {
     @Column(name = "primer_apellido")
     private String primerApellido;
 
-    @Column(name = "segundo_apellido")
-    private String segundoApellido;
-
     private String telefono;
 
     @Column(name = "codigo_postal")
@@ -45,10 +42,21 @@ public class Usuario {
     @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
 
-    @Column(name = "animal_favorito")
-    private String animalFavorito;
-
     @Column(nullable = false)
     @Builder.Default
     private boolean activo = true;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String rol = "USER";
+
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Integer tokenVersion = 0;
 }

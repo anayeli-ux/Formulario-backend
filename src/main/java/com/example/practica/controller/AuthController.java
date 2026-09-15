@@ -1,29 +1,28 @@
 package com.example.practica.controller;
 
 import com.example.practica.dto.LoginRequest;
-
+import com.example.practica.dto.LoginResponse;
+import com.example.practica.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
+    private final AuthService authService;
+
     @PostMapping("/admin")
-    public ResponseEntity<Map<String, Boolean>>
-    loginAdmin(
-            @RequestBody LoginRequest datos
+    public ResponseEntity<LoginResponse> loginAdmin(
+            @Valid @RequestBody LoginRequest request
     ) {
 
-        boolean acceso =
-                "admin".equals(datos.getUsuario())
-                        &&
-                        "12356".equals(datos.getPassword());
+        LoginResponse response =
+                authService.loginAdmin(request);
 
-        return ResponseEntity.ok(
-                Map.of("acceso", acceso)
-        );
+        return ResponseEntity.ok(response);
     }
 }

@@ -21,8 +21,6 @@ public class UsuarioResponseDTO {
 
     private String primerApellido;
 
-    private String segundoApellido;
-
     private String telefono;
 
     private String codigoPostal;
@@ -35,7 +33,9 @@ public class UsuarioResponseDTO {
 
     private LocalDate fechaNacimiento;
 
-    private String animalFavorito;
+    private String email;
+
+    private String rol;
 
     private boolean activo;
 }

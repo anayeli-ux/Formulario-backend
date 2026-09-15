@@ -3,15 +3,19 @@ package com.example.practica.service;
 import com.example.practica.dto.PostaliaResponse;
 import com.example.practica.exception.CodigoPostalNoEncontradoException;
 import com.example.practica.exception.PostaliaNoDisponibleException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 @Service
 public class PostaliaService {
+
+    private static final Logger log = LoggerFactory.getLogger(PostaliaService.class);
 
     private final RestClient restClient;
     private final String apiKey;
@@ -22,34 +26,61 @@ public class PostaliaService {
 
         this.restClient = RestClient.builder()
                 .baseUrl(apiUrl)
+                .defaultHeader(
+                        HttpHeaders.ACCEPT,
+                        MediaType.APPLICATION_JSON_VALUE
+                )
                 .build();
 
         this.apiKey = apiKey;
     }
 
     public PostaliaResponse consultarCodigoPostal(String codigoPostal) {
+
         try {
-            return restClient
+
+            log.debug("=== LLAMADA REAL A POSTALIA ===");
+            log.debug("CP: [{}]", codigoPostal);
+            log.debug("API KEY cargada: {}", apiKey != null && !apiKey.isBlank());
+
+            PostaliaResponse respuesta = restClient
                     .get()
                     .uri("/{codigoPostal}", codigoPostal)
-                    .header("Authorization", "Bearer " + apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(
+                            HttpHeaders.AUTHORIZATION,
+                            "Bearer " + apiKey
+                    )
                     .retrieve()
                     .body(PostaliaResponse.class);
 
-        } catch (RestClientResponseException e) {
-            // Postalia SÍ respondió, pero con un código de error
-            HttpStatusCode status = e.getStatusCode();
+            log.debug("=== RESPUESTA POSTALIA ===");
+            log.debug("{}", respuesta);
 
-            if (status.is4xxClientError()) {
-                // 400/404 → el código postal no existe o la petición está mal formada
+            if (respuesta == null) {
                 throw new CodigoPostalNoEncontradoException(codigoPostal);
             }
 
-            // 5xx → Postalia tuvo un error interno de su lado
+            return respuesta;
+
+        } catch (RestClientResponseException e) {
+
+            log.warn("=== ERROR HTTP POSTALIA ===");
+            log.warn("Status: {}", e.getStatusCode());
+            log.warn("Body: {}", e.getResponseBodyAsString());
+
+            if (e.getStatusCode().is4xxClientError()) {
+                throw new CodigoPostalNoEncontradoException(codigoPostal);
+            }
+
             throw new PostaliaNoDisponibleException();
 
-        } catch (RestClientException e) {
-            // Postalia no respondió: timeout, conexión rechazada, DNS, etc.
+        } catch (Exception e) {
+
+            log.error("=== ERROR POSTALIA ===");
+            log.error("Tipo: {}", e.getClass().getName());
+            log.error("Mensaje: {}", e.getMessage());
+
             throw new PostaliaNoDisponibleException();
         }
     }
