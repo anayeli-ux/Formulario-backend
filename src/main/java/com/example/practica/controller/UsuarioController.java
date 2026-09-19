@@ -7,8 +7,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.core.Authentication;
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -45,10 +46,28 @@ public class UsuarioController {
                 service.listarUsuariosEliminados()
         );
     }
+    // =====================================================
+    // OBTENER MIS DATOS
+    // =====================================================
 
+    @GetMapping("/me")
+    public ResponseEntity<UsuarioResponseDTO>
+    obtenerMiPerfil(
+            Authentication authentication
+    ) {
+
+        String email =
+                authentication.getName();
+
+        return ResponseEntity.ok(
+                service.obtenerMiPerfil(email)
+        );
+    }
     // =====================================================
     // BUSCAR POR ID
     // =====================================================
+
+
 
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioResponseDTO>

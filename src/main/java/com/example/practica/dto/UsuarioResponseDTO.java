@@ -1,10 +1,6 @@
 package com.example.practica.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDate;
 
@@ -35,7 +31,7 @@ public class UsuarioResponseDTO {
 
     private String email;
 
-    private String rol;
-
     private boolean activo;
+
+    private String rol;
 }

@@ -5,7 +5,7 @@ import com.example.practica.dto.LoginResponse;
 
 public interface AuthService {
 
-    LoginResponse loginAdmin(
+    LoginResponse login(
             LoginRequest request
     );
 }

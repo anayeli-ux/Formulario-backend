@@ -13,6 +13,12 @@ public interface UsuarioService {
 
     UsuarioResponseDTO buscarUsuario(Long id);
 
+    // =====================================================
+    // OBTENER MIS DATOS
+    // =====================================================
+
+    UsuarioResponseDTO obtenerMiPerfil(String email);
+
     UsuarioResponseDTO crearUsuario(
             UsuarioRequestDTO usuario
     );

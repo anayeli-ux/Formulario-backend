@@ -52,6 +52,7 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+
     // =====================================================
     // USUARIO NO ENCONTRADO -> 404
     // =====================================================
@@ -73,8 +74,9 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+
     // =====================================================
-    // CÓDIGO POSTAL INVÁLIDO -> 400
+    // CÓDIGO POSTAL NO ENCONTRADO -> 404
     // =====================================================
 
     @ExceptionHandler(CodigoPostalNoEncontradoException.class)
@@ -85,14 +87,15 @@ public class GlobalExceptionHandler {
 
         Map<String, Object> body =
                 errorBase(
-                        HttpStatus.BAD_REQUEST,
+                        HttpStatus.NOT_FOUND,
                         ex.getMessage()
                 );
 
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(HttpStatus.NOT_FOUND)
                 .body(body);
     }
+
 
     // =====================================================
     // POSTALIA NO DISPONIBLE -> 503
@@ -115,6 +118,7 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+
     // =====================================================
     // TELÉFONO DUPLICADO -> 409
     // =====================================================
@@ -135,6 +139,29 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(body);
     }
+
+
+    // =====================================================
+    // EMAIL DUPLICADO -> 409
+    // =====================================================
+
+    @ExceptionHandler(EmailDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>>
+    handleEmailDuplicado(
+            EmailDuplicadoException ex
+    ) {
+
+        Map<String, Object> body =
+                errorBase(
+                        HttpStatus.CONFLICT,
+                        ex.getMessage()
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(body);
+    }
+
 
     // =====================================================
     // MENOR DE EDAD -> 400
@@ -157,6 +184,7 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+
     // =====================================================
     // INTENTAR REACTIVAR USUARIO ACTIVO -> 409
     // =====================================================
@@ -178,6 +206,7 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+
     // =====================================================
     // ERROR GENERAL -> 500
     // =====================================================
@@ -187,6 +216,12 @@ public class GlobalExceptionHandler {
     handleGeneral(
             Exception ex
     ) {
+
+        /*
+         * Lo mostramos en consola para poder encontrar
+         * el error real durante desarrollo.
+         */
+        ex.printStackTrace();
 
         Map<String, Object> body =
                 errorBase(
@@ -199,8 +234,9 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+
     // =====================================================
-    // ESTRUCTURA COMÚN DE LOS ERRORES
+    // ESTRUCTURA COMÚN
     // =====================================================
 
     private Map<String, Object> errorBase(
@@ -227,34 +263,5 @@ public class GlobalExceptionHandler {
         );
 
         return body;
-    }
-
-    @ExceptionHandler(EmailDuplicadoException.class)
-    public ResponseEntity<Map<String, Object>>
-    manejarEmailDuplicado(
-            EmailDuplicadoException ex
-    ) {
-
-        Map<String, Object> respuesta =
-                new HashMap<>();
-
-        respuesta.put(
-                "timestamp",
-                LocalDateTime.now()
-        );
-
-        respuesta.put(
-                "status",
-                HttpStatus.CONFLICT.value()
-        );
-
-        respuesta.put(
-                "mensaje",
-                ex.getMessage()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(respuesta);
     }
 }

@@ -1,17 +1,15 @@
 package com.example.practica.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "usuarios", schema = "public")
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,28 +21,14 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String nombre;
 
-    @Column(name = "primer_apellido")
+    @Column(name = "primer_apellido", nullable = false)
     private String primerApellido;
 
-    private String telefono;
-
-    @Column(name = "codigo_postal")
-    private String codigoPostal;
-
-    private String estado;
-
-    private String municipio;
-
-    private String direccion;
-
-    @Column(name = "fecha_nacimiento")
+    @Column(name = "fecha_nacimiento", nullable = false)
     private LocalDate fechaNacimiento;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean activo = true;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -52,11 +36,41 @@ public class Usuario {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private String rol = "USER";
-
     @Column(name = "token_version", nullable = false)
     @Builder.Default
     private Integer tokenVersion = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean activo = true;
+
+    @Column(name = "fecha_creacion", nullable = false)
+    private LocalDateTime fechaCreacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rol_id", nullable = false)
+    private Rol rol;
+
+    @OneToMany(
+            mappedBy = "usuario",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<Telefono> telefonos = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "usuario",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<Direccion> direcciones = new ArrayList<>();
+
+    @PrePersist
+    protected void prePersist() {
+        if (fechaCreacion == null) {
+            fechaCreacion = LocalDateTime.now();
+        }
+    }
 }
