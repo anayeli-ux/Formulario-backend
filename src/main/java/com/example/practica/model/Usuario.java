@@ -36,13 +36,9 @@ public class Usuario {
     @Column(nullable = false)
     private String password;
 
-    @Column(name = "token_version", nullable = false)
-    @Builder.Default
-    private Integer tokenVersion = 0;
+    @Column(name = "fecha_baja")
+    private LocalDateTime fechaBaja;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean activo = true;
 
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;

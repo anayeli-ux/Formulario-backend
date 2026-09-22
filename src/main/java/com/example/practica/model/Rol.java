@@ -22,6 +22,10 @@ public class Rol {
     @Column(nullable = false, unique = true, length = 50)
     private String nombre;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rol_id", nullable = false)
+    private Rol rol;
+
     @OneToMany(mappedBy = "rol")
     @Builder.Default
     private List<Usuario> usuarios = new ArrayList<>();

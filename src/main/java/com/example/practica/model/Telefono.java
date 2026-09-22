@@ -22,4 +22,7 @@ public class Telefono {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
+
+    @Column(length = 45)
+    private String categoria;
 }

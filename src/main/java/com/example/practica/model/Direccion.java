@@ -26,4 +26,8 @@ public class Direccion {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "codigo_postal", nullable = false)
     private CodigoPostal codigoPostal;
+
+    @Column(length = 45)
+    private String categoria;
+
 }
