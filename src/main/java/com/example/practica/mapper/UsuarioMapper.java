@@ -1,11 +1,17 @@
 package com.example.practica.mapper;
 
+import com.example.practica.dto.DireccionResponseDTO;
+import com.example.practica.dto.TelefonoResponseDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
+
 import com.example.practica.model.Direccion;
 import com.example.practica.model.Telefono;
 import com.example.practica.model.Usuario;
+
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class UsuarioMapper {
@@ -22,8 +28,7 @@ public class UsuarioMapper {
                 .fechaNacimiento(dto.getFechaNacimiento())
                 .email(dto.getEmail())
                 .password(dto.getPassword())
-                .activo(true)
-                .tokenVersion(0)
+                .fechaBaja(null)
                 .build();
     }
 
@@ -43,10 +48,11 @@ public class UsuarioMapper {
         usuario.setEmail(dto.getEmail());
 
         /*
-         * La contraseña NO se actualiza aquí.
+         * La contraseña no se modifica aquí.
+         * El Service se encarga de decidir si debe cambiar
+         * y de aplicar BCrypt.
          *
-         * El Service será responsable de decidir cuándo
-         * cambiarla y de codificarla antes de guardarla.
+         * fechaBaja tampoco se modifica al editar.
          */
     }
 
@@ -57,11 +63,64 @@ public class UsuarioMapper {
 
     public UsuarioResponseDTO toResponseDTO(
             Usuario usuario,
-            Telefono telefono,
-            Direccion direccion,
             String estado,
             String municipio
     ) {
+
+        List<TelefonoResponseDTO> telefonos =
+                usuario.getTelefonos()
+                        .stream()
+                        .map(this::telefonoToResponse)
+                        .toList();
+
+        List<DireccionResponseDTO> direcciones =
+                usuario.getDirecciones()
+                        .stream()
+                        .map(this::direccionToResponse)
+                        .toList();
+
+
+        // -----------------------------------------------------
+        // Obtener teléfono principal
+        // -----------------------------------------------------
+
+        Telefono telefonoPrincipal =
+                usuario.getTelefonos()
+                        .stream()
+                        .filter(t ->
+                                "PRINCIPAL".equalsIgnoreCase(
+                                        t.getCategoria()
+                                )
+                        )
+                        .findFirst()
+                        .orElseGet(() ->
+                                usuario.getTelefonos()
+                                        .stream()
+                                        .findFirst()
+                                        .orElse(null)
+                        );
+
+
+        // -----------------------------------------------------
+        // Obtener dirección principal
+        // -----------------------------------------------------
+
+        Direccion direccionPrincipal =
+                usuario.getDirecciones()
+                        .stream()
+                        .filter(d ->
+                                "PRINCIPAL".equalsIgnoreCase(
+                                        d.getCategoria()
+                                )
+                        )
+                        .findFirst()
+                        .orElseGet(() ->
+                                usuario.getDirecciones()
+                                        .stream()
+                                        .findFirst()
+                                        .orElse(null)
+                        );
+
 
         return UsuarioResponseDTO.builder()
 
@@ -73,18 +132,22 @@ public class UsuarioMapper {
                         usuario.getPrimerApellido()
                 )
 
+                // Campo principal para compatibilidad
+                // con el frontend actual.
                 .telefono(
-                        telefono != null
-                                ? telefono.getTelefono()
+                        telefonoPrincipal != null
+                                ? telefonoPrincipal.getTelefono()
                                 : null
                 )
 
                 .codigoPostal(
-                        direccion != null
-                                && direccion.getCodigoPostal() != null
-                                ? direccion
+                        direccionPrincipal != null
+                                && direccionPrincipal.getCodigoPostal() != null
+
+                                ? direccionPrincipal
                                 .getCodigoPostal()
                                 .getCodigoPostal()
+
                                 : null
                 )
 
@@ -93,8 +156,8 @@ public class UsuarioMapper {
                 .municipio(municipio)
 
                 .direccion(
-                        direccion != null
-                                ? direccion.getDireccion()
+                        direccionPrincipal != null
+                                ? direccionPrincipal.getDireccion()
                                 : null
                 )
 
@@ -106,13 +169,59 @@ public class UsuarioMapper {
                         usuario.getEmail()
                 )
 
-                .activo(
-                        usuario.isActivo()
+                .fechaBaja(
+                        usuario.getFechaBaja()
                 )
 
                 .rol(
                         usuario.getRol() != null
                                 ? usuario.getRol().getNombre()
+                                : null
+                )
+
+                // Nuevas colecciones
+                .telefonos(telefonos)
+
+                .direcciones(direcciones)
+
+                .build();
+    }
+
+
+    // =========================================================
+    // TELEFONO -> TELEFONO RESPONSE DTO
+    // =========================================================
+
+    private TelefonoResponseDTO telefonoToResponse(
+            Telefono telefono
+    ) {
+
+        return TelefonoResponseDTO.builder()
+                .id(telefono.getId())
+                .tipo(telefono.getCategoria())
+                .valor(telefono.getTelefono())
+                .build();
+    }
+
+
+    // =========================================================
+    // DIRECCION -> DIRECCION RESPONSE DTO
+    // =========================================================
+
+    private DireccionResponseDTO direccionToResponse(
+            Direccion direccion
+    ) {
+
+        return DireccionResponseDTO.builder()
+                .id(direccion.getId())
+                .tipo(direccion.getCategoria())
+                .valor(direccion.getDireccion())
+
+                .codigoPostal(
+                        direccion.getCodigoPostal() != null
+                                ? direccion
+                                .getCodigoPostal()
+                                .getCodigoPostal()
                                 : null
                 )
 

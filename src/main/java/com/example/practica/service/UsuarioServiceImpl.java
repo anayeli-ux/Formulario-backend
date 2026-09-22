@@ -1,6 +1,8 @@
 package com.example.practica.service;
 
+import com.example.practica.dto.DireccionRequest;
 import com.example.practica.dto.PostaliaResponse;
+import com.example.practica.dto.TelefonoRequest;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 
@@ -31,7 +33,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -57,7 +62,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     public List<UsuarioResponseDTO> listarUsuarios() {
 
         return usuarioRepository
-                .findByActivoTrueOrderByIdAsc()
+                .findByFechaBajaIsNullOrderByIdAsc()
                 .stream()
                 .map(this::construirRespuesta)
                 .toList();
@@ -65,7 +70,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // LISTAR USUARIOS INACTIVOS
+    // LISTAR USUARIOS ELIMINADOS
     // =========================================================
 
     @Override
@@ -73,7 +78,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     public List<UsuarioResponseDTO> listarUsuariosEliminados() {
 
         return usuarioRepository
-                .findByActivoFalseOrderByIdAsc()
+                .findByFechaBajaIsNotNullOrderByIdAsc()
                 .stream()
                 .map(this::construirRespuesta)
                 .toList();
@@ -81,7 +86,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // BUSCAR USUARIO
+    // BUSCAR USUARIO ACTIVO
     // =========================================================
 
     @Override
@@ -89,7 +94,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioResponseDTO buscarUsuario(Long id) {
 
         Usuario usuario = usuarioRepository
-                .findByIdAndActivoTrue(id)
+                .findByIdAndFechaBajaIsNull(id)
                 .orElseThrow(
                         () -> new UsuarioNoEncontradoException(id)
                 );
@@ -101,18 +106,13 @@ public class UsuarioServiceImpl implements UsuarioService {
     // =========================================================
     // OBTENER MI PERFIL
     // =========================================================
-    //
-    // Usado por el endpoint /api/usuarios/me: el usuario logueado
-    // (identificado por el email que viene del JWT, no por un id
-    // en la URL) consulta sus propios datos.
-    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
     public UsuarioResponseDTO obtenerMiPerfil(String email) {
 
         Usuario usuario = usuarioRepository
-                .findByEmailAndActivoTrue(email)
+                .findByEmailAndFechaBajaIsNull(email)
                 .orElseThrow(
                         () -> new UsuarioNoEncontradoException(email)
                 );
@@ -134,27 +134,21 @@ public class UsuarioServiceImpl implements UsuarioService {
         // 1. Validar edad
         validarEdad(dto.getFechaNacimiento());
 
-
-        // 2. Validar email duplicado
+        // 2. Validar email
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new EmailDuplicadoException();
         }
 
+        // 3. Validar teléfonos antes de guardar nada
+        validarTelefonosNuevos(dto);
 
-        // 3. Validar teléfono duplicado
-        if (telefonoRepository.existsByTelefono(dto.getTelefono())) {
-            throw new TelefonoDuplicadoException();
-        }
-
-
-        // 4. Consultar código postal en Postalia
-        PostaliaResponse ubicacion =
+        // 4. Validar CP principal con Postalia
+        PostaliaResponse ubicacionPrincipal =
                 postaliaService.consultarCodigoPostal(
                         dto.getCodigoPostal()
                 );
 
-
-        // 5. Buscar el rol USER
+        // 5. Buscar rol USER
         Rol rolUser = rolRepository
                 .findByNombre("USER")
                 .orElseThrow(
@@ -163,75 +157,42 @@ public class UsuarioServiceImpl implements UsuarioService {
                         )
                 );
 
+        // 6. Crear Usuario
+        Usuario usuario = usuarioMapper.toEntity(dto);
 
-        // 6. Convertir DTO -> Usuario
-        Usuario usuario =
-                usuarioMapper.toEntity(dto);
-
-
-        // 7. Hashear contraseña
         usuario.setPassword(
-                passwordEncoder.encode(
-                        dto.getPassword()
-                )
+                passwordEncoder.encode(dto.getPassword())
         );
 
-
-        // 8. Asignar rol
         usuario.setRol(rolUser);
+        usuario.setFechaBaja(null);
 
-        usuario.setActivo(true);
-        usuario.setTokenVersion(0);
-
-
-        // 9. Guardar usuario
         Usuario usuarioGuardado =
                 usuarioRepository.save(usuario);
 
+        // 7. Guardar teléfonos
+        guardarTelefonos(
+                usuarioGuardado,
+                dto
+        );
 
-        // 10. Crear teléfono
-        Telefono telefono = Telefono.builder()
-                .telefono(dto.getTelefono())
-                .usuario(usuarioGuardado)
-                .build();
+        // 8. Guardar direcciones
+        guardarDirecciones(
+                usuarioGuardado,
+                dto
+        );
 
-        telefonoRepository.save(telefono);
+        /*
+         * Como guardamos las relaciones mediante repositories
+         * separados, volvemos a cargar las colecciones antes
+         * de construir la respuesta.
+         */
+        recargarRelaciones(usuarioGuardado);
 
-
-        // 11. Buscar o crear código postal
-        CodigoPostal codigoPostal =
-                codigoPostalRepository
-                        .findById(dto.getCodigoPostal())
-                        .orElseGet(() -> {
-
-                            CodigoPostal nuevo =
-                                    CodigoPostal.builder()
-                                            .codigoPostal(
-                                                    dto.getCodigoPostal()
-                                            )
-                                            .build();
-
-                            return codigoPostalRepository.save(nuevo);
-                        });
-
-
-        // 12. Crear dirección
-        Direccion direccion = Direccion.builder()
-                .direccion(dto.getDireccion())
-                .usuario(usuarioGuardado)
-                .codigoPostal(codigoPostal)
-                .build();
-
-        direccionRepository.save(direccion);
-
-
-        // 13. Construir respuesta
         return usuarioMapper.toResponseDTO(
                 usuarioGuardado,
-                telefono,
-                direccion,
-                ubicacion.getEstado(),
-                ubicacion.getMunicipio()
+                ubicacionPrincipal.getEstado(),
+                ubicacionPrincipal.getMunicipio()
         );
     }
 
@@ -248,149 +209,97 @@ public class UsuarioServiceImpl implements UsuarioService {
     ) {
 
         Usuario usuario = usuarioRepository
-                .findByIdAndActivoTrue(id)
+                .findByIdAndFechaBajaIsNull(id)
                 .orElseThrow(
                         () -> new UsuarioNoEncontradoException(id)
                 );
 
-
+        // 1. Edad
         validarEdad(dto.getFechaNacimiento());
 
-
-        // -----------------------------------------------------
-        // Obtener teléfono actual
-        // -----------------------------------------------------
-
-        Telefono telefono = obtenerTelefono(usuario);
-
-
-        // -----------------------------------------------------
-        // Validar teléfono duplicado
-        // -----------------------------------------------------
-
+        // 2. Email duplicado
         if (
-                telefono != null
-                        && !telefono.getTelefono().equals(dto.getTelefono())
-                        && telefonoRepository.existsByTelefono(dto.getTelefono())
+                !usuario.getEmail()
+                        .equalsIgnoreCase(dto.getEmail())
+                        && usuarioRepository.existsByEmail(
+                        dto.getEmail()
+                )
         ) {
-
-            throw new TelefonoDuplicadoException();
-        }
-
-
-        // -----------------------------------------------------
-        // Validar email duplicado
-        // -----------------------------------------------------
-
-        if (
-                !usuario.getEmail().equalsIgnoreCase(dto.getEmail())
-                        && usuarioRepository.existsByEmail(dto.getEmail())
-        ) {
-
             throw new EmailDuplicadoException();
         }
 
+        // 3. Validar teléfonos
+        validarTelefonosActualizacion(
+                usuario,
+                dto
+        );
 
-        // -----------------------------------------------------
-        // Consultar Postalia
-        // -----------------------------------------------------
-
-        PostaliaResponse ubicacion =
+        // 4. Validar CP principal
+        PostaliaResponse ubicacionPrincipal =
                 postaliaService.consultarCodigoPostal(
                         dto.getCodigoPostal()
                 );
 
-
-        // -----------------------------------------------------
-        // Actualizar Usuario
-        // -----------------------------------------------------
-
+        // 5. Actualizar datos de Usuario
         usuarioMapper.updateEntity(
                 usuario,
                 dto
         );
 
+        /*
+         * Si tu formulario de edición manda password,
+         * solo la cambiamos cuando realmente venga una.
+         */
+        if (
+                dto.getPassword() != null
+                        && !dto.getPassword().isBlank()
+        ) {
+
+            usuario.setPassword(
+                    passwordEncoder.encode(
+                            dto.getPassword()
+                    )
+            );
+        }
+
         Usuario usuarioActualizado =
                 usuarioRepository.save(usuario);
 
+        // 6. Reemplazar teléfonos
+        telefonoRepository.deleteAll(
+                telefonoRepository.findByUsuarioId(
+                        usuarioActualizado.getId()
+                )
+        );
 
-        // -----------------------------------------------------
-        // Actualizar teléfono
-        // -----------------------------------------------------
+        telefonoRepository.flush();
 
-        if (telefono == null) {
+        guardarTelefonos(
+                usuarioActualizado,
+                dto
+        );
 
-            telefono = Telefono.builder()
-                    .telefono(dto.getTelefono())
-                    .usuario(usuarioActualizado)
-                    .build();
+        // 7. Reemplazar direcciones
+        direccionRepository.deleteAll(
+                direccionRepository.findByUsuarioId(
+                        usuarioActualizado.getId()
+                )
+        );
 
-        } else {
+        direccionRepository.flush();
 
-            telefono.setTelefono(
-                    dto.getTelefono()
-            );
-        }
+        guardarDirecciones(
+                usuarioActualizado,
+                dto
+        );
 
-        telefonoRepository.save(telefono);
-
-
-        // -----------------------------------------------------
-        // Buscar o crear código postal
-        // -----------------------------------------------------
-
-        CodigoPostal codigoPostal =
-                codigoPostalRepository
-                        .findById(dto.getCodigoPostal())
-                        .orElseGet(() -> {
-
-                            CodigoPostal nuevo =
-                                    CodigoPostal.builder()
-                                            .codigoPostal(
-                                                    dto.getCodigoPostal()
-                                            )
-                                            .build();
-
-                            return codigoPostalRepository.save(nuevo);
-                        });
-
-
-        // -----------------------------------------------------
-        // Actualizar dirección
-        // -----------------------------------------------------
-
-        Direccion direccion =
-                obtenerDireccion(usuario);
-
-
-        if (direccion == null) {
-
-            direccion = Direccion.builder()
-                    .direccion(dto.getDireccion())
-                    .usuario(usuarioActualizado)
-                    .codigoPostal(codigoPostal)
-                    .build();
-
-        } else {
-
-            direccion.setDireccion(
-                    dto.getDireccion()
-            );
-
-            direccion.setCodigoPostal(
-                    codigoPostal
-            );
-        }
-
-        direccionRepository.save(direccion);
-
+        // 8. Recargar relaciones
+        recargarRelaciones(usuarioActualizado);
 
         return usuarioMapper.toResponseDTO(
                 usuarioActualizado,
-                telefono,
-                direccion,
-                ubicacion.getEstado(),
-                ubicacion.getMunicipio()
+                ubicacionPrincipal.getEstado(),
+                ubicacionPrincipal.getMunicipio()
         );
     }
 
@@ -404,21 +313,13 @@ public class UsuarioServiceImpl implements UsuarioService {
     public boolean eliminarUsuario(Long id) {
 
         Usuario usuario = usuarioRepository
-                .findByIdAndActivoTrue(id)
+                .findByIdAndFechaBajaIsNull(id)
                 .orElseThrow(
                         () -> new UsuarioNoEncontradoException(id)
                 );
 
-        usuario.setActivo(false);
-
-        /*
-         * Incrementamos tokenVersion.
-         *
-         * Esto permitirá invalidar tokens anteriores
-         * cuando adaptemos JwtService.
-         */
-        usuario.setTokenVersion(
-                usuario.getTokenVersion() + 1
+        usuario.setFechaBaja(
+                LocalDateTime.now()
         );
 
         usuarioRepository.save(usuario);
@@ -428,7 +329,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // REACTIVAR
+    // REACTIVAR USUARIO
     // =========================================================
 
     @Override
@@ -441,11 +342,14 @@ public class UsuarioServiceImpl implements UsuarioService {
                         () -> new UsuarioNoEncontradoException(id)
                 );
 
-        if (usuario.isActivo()) {
+        /*
+         * fechaBaja == null significa que YA está activo.
+         */
+        if (usuario.getFechaBaja() == null) {
             throw new UsuarioYaActivoException(id);
         }
 
-        usuario.setActivo(true);
+        usuario.setFechaBaja(null);
 
         Usuario reactivado =
                 usuarioRepository.save(usuario);
@@ -455,37 +359,357 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // CONSTRUIR RESPONSE DTO
+    // GUARDAR TELÉFONOS
     // =========================================================
-    //
-    // CAMBIO: ya no se consulta Postalia aquí. El listado de
-    // usuarios (y buscarUsuario/reactivarUsuario, que también
-    // usan este método) no necesita estado/municipio.
-    //
-    // Esos datos se piden a Postalia solo cuando hacen falta:
-    // - Angular llama directamente a GET /api/postalia/{cp}
-    //   cuando el admin abre el modal de edición o cambia el CP.
-    // - crearUsuario() y actualizarUsuario() siguen consultando
-    //   Postalia como validación de backend.
-    //
-    // Esto evita 1 llamada a Postalia POR CADA usuario listado
-    // (antes: 30 usuarios = 30 llamadas; ahora: 0).
+
+    private void guardarTelefonos(
+            Usuario usuario,
+            UsuarioRequestDTO dto
+    ) {
+
+        Set<String> telefonosGuardados =
+                new HashSet<>();
+
+        /*
+         * Primero guardamos el teléfono principal que sigue
+         * llegando en dto.telefono.
+         */
+        Telefono principal = Telefono.builder()
+                .telefono(dto.getTelefono())
+                .categoria("PRINCIPAL")
+                .usuario(usuario)
+                .build();
+
+        telefonoRepository.save(principal);
+
+        telefonosGuardados.add(
+                dto.getTelefono()
+        );
+
+
+        /*
+         * Después guardamos los teléfonos de la lista,
+         * evitando repetir el principal.
+         */
+        if (dto.getTelefonos() != null) {
+
+            for (TelefonoRequest contacto
+                    : dto.getTelefonos()) {
+
+                if (
+                        contacto.getValor() == null
+                                || contacto.getValor().isBlank()
+                ) {
+                    continue;
+                }
+
+                if (
+                        telefonosGuardados.add(
+                                contacto.getValor()
+                        )
+                ) {
+
+                    Telefono telefono =
+                            Telefono.builder()
+                                    .telefono(
+                                            contacto.getValor()
+                                    )
+                                    .categoria(
+                                            normalizarCategoria(
+                                                    contacto.getTipo()
+                                            )
+                                    )
+                                    .usuario(usuario)
+                                    .build();
+
+                    telefonoRepository.save(
+                            telefono
+                    );
+                }
+            }
+        }
+    }
+
+
+    // =========================================================
+    // GUARDAR DIRECCIONES
+    // =========================================================
+
+    private void guardarDirecciones(
+            Usuario usuario,
+            UsuarioRequestDTO dto
+    ) {
+
+        Set<String> direccionesGuardadas =
+                new HashSet<>();
+
+        // -----------------------------------------------------
+        // Dirección principal
+        // -----------------------------------------------------
+
+        CodigoPostal codigoPostalPrincipal =
+                obtenerOCrearCodigoPostal(
+                        dto.getCodigoPostal()
+                );
+
+        Direccion principal =
+                Direccion.builder()
+                        .direccion(dto.getDireccion())
+                        .categoria("PRINCIPAL")
+                        .usuario(usuario)
+                        .codigoPostal(
+                                codigoPostalPrincipal
+                        )
+                        .build();
+
+        direccionRepository.save(principal);
+
+        /*
+         * Usamos dirección + CP para detectar duplicados.
+         */
+        direccionesGuardadas.add(
+                claveDireccion(
+                        dto.getDireccion(),
+                        dto.getCodigoPostal()
+                )
+        );
+
+
+        // -----------------------------------------------------
+        // Direcciones adicionales
+        // -----------------------------------------------------
+
+        if (dto.getDirecciones() != null) {
+
+            for (DireccionRequest contacto
+                    : dto.getDirecciones()) {
+
+                if (
+                        contacto.getValor() == null
+                                || contacto.getValor().isBlank()
+                ) {
+                    continue;
+                }
+
+                String clave = claveDireccion(
+                        contacto.getValor(),
+                        contacto.getCodigoPostal()
+                );
+
+                /*
+                 * Si ya guardamos exactamente esa dirección
+                 * con ese CP, no la repetimos.
+                 */
+                if (!direccionesGuardadas.add(clave)) {
+                    continue;
+                }
+
+                /*
+                 * Validamos cada CP adicional con Postalia.
+                 */
+                postaliaService.consultarCodigoPostal(
+                        contacto.getCodigoPostal()
+                );
+
+                CodigoPostal codigoPostal =
+                        obtenerOCrearCodigoPostal(
+                                contacto.getCodigoPostal()
+                        );
+
+                Direccion direccion =
+                        Direccion.builder()
+                                .direccion(
+                                        contacto.getValor()
+                                )
+                                .categoria(
+                                        normalizarCategoria(
+                                                contacto.getTipo()
+                                        )
+                                )
+                                .usuario(usuario)
+                                .codigoPostal(
+                                        codigoPostal
+                                )
+                                .build();
+
+                direccionRepository.save(
+                        direccion
+                );
+            }
+        }
+    }
+
+
+    // =========================================================
+    // VALIDAR TELÉFONOS AL CREAR
+    // =========================================================
+
+    private void validarTelefonosNuevos(
+            UsuarioRequestDTO dto
+    ) {
+
+        Set<String> telefonos =
+                obtenerTelefonosDTO(dto);
+
+        for (String telefono : telefonos) {
+
+            if (
+                    telefonoRepository.existsByTelefono(
+                            telefono
+                    )
+            ) {
+                throw new TelefonoDuplicadoException();
+            }
+        }
+    }
+
+
+    // =========================================================
+    // VALIDAR TELÉFONOS AL ACTUALIZAR
+    // =========================================================
+
+    private void validarTelefonosActualizacion(
+            Usuario usuario,
+            UsuarioRequestDTO dto
+    ) {
+
+        Set<String> nuevosTelefonos =
+                obtenerTelefonosDTO(dto);
+
+        Set<String> telefonosActuales =
+                telefonoRepository
+                        .findByUsuarioId(usuario.getId())
+                        .stream()
+                        .map(Telefono::getTelefono)
+                        .collect(
+                                java.util.stream.Collectors.toSet()
+                        );
+
+        for (String telefono : nuevosTelefonos) {
+
+            /*
+             * Si el teléfono ya pertenece a este mismo
+             * usuario, está permitido.
+             */
+            if (telefonosActuales.contains(telefono)) {
+                continue;
+            }
+
+            /*
+             * Si pertenece a otro usuario, no.
+             */
+            if (
+                    telefonoRepository.existsByTelefono(
+                            telefono
+                    )
+            ) {
+                throw new TelefonoDuplicadoException();
+            }
+        }
+    }
+
+
+    // =========================================================
+    // OBTENER TODOS LOS TELÉFONOS DEL DTO
+    // =========================================================
+
+    private Set<String> obtenerTelefonosDTO(
+            UsuarioRequestDTO dto
+    ) {
+
+        Set<String> telefonos =
+                new HashSet<>();
+
+        telefonos.add(
+                dto.getTelefono()
+        );
+
+        if (dto.getTelefonos() != null) {
+
+            for (TelefonoRequest telefono
+                    : dto.getTelefonos()) {
+
+                if (
+                        telefono.getValor() != null
+                                && !telefono
+                                .getValor()
+                                .isBlank()
+                ) {
+
+                    telefonos.add(
+                            telefono.getValor()
+                    );
+                }
+            }
+        }
+
+        return telefonos;
+    }
+
+
+    // =========================================================
+    // OBTENER O CREAR CÓDIGO POSTAL
+    // =========================================================
+
+    private CodigoPostal obtenerOCrearCodigoPostal(
+            String codigoPostal
+    ) {
+
+        return codigoPostalRepository
+                .findById(codigoPostal)
+                .orElseGet(() -> {
+
+                    CodigoPostal nuevo =
+                            CodigoPostal.builder()
+                                    .codigoPostal(
+                                            codigoPostal
+                                    )
+                                    .build();
+
+                    return codigoPostalRepository
+                            .save(nuevo);
+                });
+    }
+
+
+    // =========================================================
+    // RECARGAR RELACIONES
+    // =========================================================
+
+    private void recargarRelaciones(
+            Usuario usuario
+    ) {
+
+        usuario.setTelefonos(
+                telefonoRepository.findByUsuarioId(
+                        usuario.getId()
+                )
+        );
+
+        usuario.setDirecciones(
+                direccionRepository.findByUsuarioId(
+                        usuario.getId()
+                )
+        );
+    }
+
+
+    // =========================================================
+    // CONSTRUIR RESPONSE
     // =========================================================
 
     private UsuarioResponseDTO construirRespuesta(
             Usuario usuario
     ) {
 
-        Telefono telefono =
-                obtenerTelefono(usuario);
+        recargarRelaciones(usuario);
 
-        Direccion direccion =
-                obtenerDireccion(usuario);
-
+        /*
+         * No consultamos Postalia cuando simplemente
+         * listamos usuarios.
+         */
         return usuarioMapper.toResponseDTO(
                 usuario,
-                telefono,
-                direccion,
                 null,
                 null
         );
@@ -493,34 +717,40 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // OBTENER TELÉFONO PRINCIPAL
+    // NORMALIZAR CATEGORÍA
     // =========================================================
 
-    private Telefono obtenerTelefono(
-            Usuario usuario
+    private String normalizarCategoria(
+            String categoria
     ) {
 
-        return telefonoRepository
-                .findByUsuarioId(usuario.getId())
-                .stream()
-                .findFirst()
-                .orElse(null);
+        if (
+                categoria == null
+                        || categoria.isBlank()
+        ) {
+            return "OTRO";
+        }
+
+        return categoria
+                .trim()
+                .toUpperCase();
     }
 
 
     // =========================================================
-    // OBTENER DIRECCIÓN PRINCIPAL
+    // CLAVE PARA DETECTAR DIRECCIONES REPETIDAS
     // =========================================================
 
-    private Direccion obtenerDireccion(
-            Usuario usuario
+    private String claveDireccion(
+            String direccion,
+            String codigoPostal
     ) {
 
-        return direccionRepository
-                .findByUsuarioId(usuario.getId())
-                .stream()
-                .findFirst()
-                .orElse(null);
+        return direccion
+                .trim()
+                .toLowerCase()
+                + "|"
+                + codigoPostal;
     }
 
 
@@ -536,7 +766,11 @@ public class UsuarioServiceImpl implements UsuarioService {
                 LocalDate.now()
                         .minusYears(18);
 
-        if (fechaNacimiento.isAfter(fechaLimite)) {
+        if (
+                fechaNacimiento.isAfter(
+                        fechaLimite
+                )
+        ) {
             throw new MenorDeEdadException();
         }
     }

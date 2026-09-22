@@ -35,23 +35,24 @@ public class AuthServiceImpl implements AuthService {
 
 
         // ==========================================
-        // 2. Buscar usuario por email
+        // 2. Buscar usuario
         // ==========================================
 
-        Usuario usuario = usuarioRepository
-                .findByEmail(email)
-                .orElseThrow(
-                        () -> new RuntimeException(
-                                "Credenciales incorrectas"
-                        )
-                );
+        Usuario usuario =
+                usuarioRepository
+                        .findByEmail(email)
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Credenciales incorrectas"
+                                )
+                        );
 
 
         // ==========================================
         // 3. Verificar baja lógica
         // ==========================================
 
-        if (!usuario.isActivo()) {
+        if (usuario.getFechaBaja() != null) {
 
             throw new RuntimeException(
                     "El usuario se encuentra inactivo"
@@ -60,7 +61,7 @@ public class AuthServiceImpl implements AuthService {
 
 
         // ==========================================
-        // 4. Comprobar contraseña
+        // 4. Verificar contraseña
         // ==========================================
 
         boolean passwordCorrecto =
@@ -78,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
 
 
         // ==========================================
-        // 5. Verificar que tenga rol
+        // 5. Verificar rol
         // ==========================================
 
         if (usuario.getRol() == null) {
@@ -98,7 +99,7 @@ public class AuthServiceImpl implements AuthService {
 
 
         // ==========================================
-        // 7. Usuario que regresamos a Angular
+        // 7. Datos del usuario para Angular
         // ==========================================
 
         UsuarioLoginDTO usuarioResponse =
@@ -115,10 +116,8 @@ public class AuthServiceImpl implements AuthService {
                         )
 
                         .build();
-
-
         // ==========================================
-        // 8. Respuesta final
+        // 8. Respuesta
         // ==========================================
 
         return LoginResponse.builder()

@@ -3,13 +3,15 @@ package com.example.practica.controller;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.service.UsuarioService;
+
 import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -21,8 +23,10 @@ public class UsuarioController {
         this.service = service;
     }
 
+
     // =====================================================
-    // LISTAR ACTIVOS
+    // LISTAR USUARIOS ACTIVOS
+    // Solo ADMIN por SecurityConfig
     // =====================================================
 
     @GetMapping
@@ -34,8 +38,10 @@ public class UsuarioController {
         );
     }
 
+
     // =====================================================
-    // LISTAR ELIMINADOS
+    // LISTAR USUARIOS ELIMINADOS
+    // Solo ADMIN
     // =====================================================
 
     @GetMapping("/eliminados")
@@ -46,8 +52,11 @@ public class UsuarioController {
                 service.listarUsuariosEliminados()
         );
     }
+
+
     // =====================================================
-    // OBTENER MIS DATOS
+    // OBTENER MI PERFIL
+    // USER o ADMIN autenticado
     // =====================================================
 
     @GetMapping("/me")
@@ -63,11 +72,12 @@ public class UsuarioController {
                 service.obtenerMiPerfil(email)
         );
     }
-    // =====================================================
-    // BUSCAR POR ID
-    // =====================================================
 
 
+    // =====================================================
+    // BUSCAR USUARIO POR ID
+    // Solo ADMIN
+    // =====================================================
 
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioResponseDTO>
@@ -80,8 +90,10 @@ public class UsuarioController {
         );
     }
 
+
     // =====================================================
-    // CREAR
+    // CREAR USUARIO
+    // Registro público
     // =====================================================
 
     @PostMapping
@@ -100,8 +112,10 @@ public class UsuarioController {
                 .body(creado);
     }
 
+
     // =====================================================
-    // ACTUALIZAR
+    // ACTUALIZAR USUARIO
+    // Solo ADMIN
     // =====================================================
 
     @PutMapping("/{id}")
@@ -121,8 +135,10 @@ public class UsuarioController {
         );
     }
 
+
     // =====================================================
-    // ELIMINAR LÓGICAMENTE
+    // BAJA LÓGICA
+    // Solo ADMIN
     // =====================================================
 
     @DeleteMapping("/{id}")
@@ -138,8 +154,10 @@ public class UsuarioController {
                 .build();
     }
 
+
     // =====================================================
-    // REACTIVAR
+    // REACTIVAR USUARIO
+    // Solo ADMIN
     // =====================================================
 
     @PutMapping("/{id}/reactivar")

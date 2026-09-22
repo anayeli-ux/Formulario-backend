@@ -1,7 +1,6 @@
 package com.example.practica.repository;
 
 import com.example.practica.model.Usuario;
-
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,16 +10,26 @@ import java.util.Optional;
 public interface UsuarioRepository
         extends JpaRepository<Usuario, Long> {
 
-    List<Usuario> findByActivoTrueOrderByIdAsc();
+    // Usuarios activos:
+    // fecha_baja IS NULL
+    List<Usuario> findByFechaBajaIsNullOrderByIdAsc();
 
-    List<Usuario> findByActivoFalseOrderByIdAsc();
+    // Usuarios dados de baja:
+    // fecha_baja IS NOT NULL
+    List<Usuario> findByFechaBajaIsNotNullOrderByIdAsc();
 
-    Optional<Usuario> findByIdAndActivoTrue(Long id);
+    // Buscar un usuario activo por ID
+    Optional<Usuario> findByIdAndFechaBajaIsNull(Long id);
 
+    // Buscar por email incluyendo su rol.
+    // Puede encontrar activos o dados de baja.
     @EntityGraph(attributePaths = "rol")
     Optional<Usuario> findByEmail(String email);
 
-    Optional<Usuario> findByEmailAndActivoTrue(String email);
+    // Buscar por email solamente si está activo
+    @EntityGraph(attributePaths = "rol")
+    Optional<Usuario> findByEmailAndFechaBajaIsNull(String email);
 
+    // Verificar si el email ya existe
     boolean existsByEmail(String email);
 }

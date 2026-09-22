@@ -6,6 +6,7 @@ import com.example.practica.service.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -28,6 +29,7 @@ public class JwtAuthenticationFilter
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
 
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -36,20 +38,27 @@ public class JwtAuthenticationFilter
     ) throws ServletException, IOException {
 
         // =====================================================
-        // 1. Obtener encabezado Authorization
+        // 1. BUSCAR JWT EN LAS COOKIES
         // =====================================================
 
-        String authHeader =
-                request.getHeader("Authorization");
+        String token = obtenerTokenDeCookie(request);
 
 
-        // Si no existe token, continuamos.
-        // SecurityConfig decidirá si la ruta es pública
-        // o necesita autenticación.
-        if (
-                authHeader == null
-                        || !authHeader.startsWith("Bearer ")
-        ) {
+        // =====================================================
+        // 2. SI NO HAY COOKIE JWT, CONTINUAR
+        // =====================================================
+
+        /*
+         * No significa que automáticamente tenga acceso.
+         *
+         * SecurityConfig decidirá después si la ruta:
+         *
+         * - es pública
+         * - requiere autenticación
+         * - requiere ADMIN
+         */
+
+        if (token == null || token.isBlank()) {
 
             filterChain.doFilter(
                     request,
@@ -60,21 +69,23 @@ public class JwtAuthenticationFilter
         }
 
 
-        // =====================================================
-        // 2. Extraer JWT
-        // =====================================================
-
-        String token =
-                authHeader.substring(7);
-
-
         try {
 
             // =================================================
-            // 3. Validar firma y expiración
+            // 3. VALIDAR JWT
             // =================================================
 
+            /*
+             * JwtService comprueba:
+             *
+             * - firma
+             * - estructura
+             * - expiración
+             */
+
             if (!jwtService.esTokenValido(token)) {
+
+                SecurityContextHolder.clearContext();
 
                 filterChain.doFilter(
                         request,
@@ -86,7 +97,7 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 4. Extraer email
+            // 4. EXTRAER EMAIL DEL JWT
             // =================================================
 
             String email =
@@ -94,8 +105,9 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 5. Buscar usuario actual en BD
+            // 5. BUSCAR USUARIO ACTUAL EN LA BD
             // =================================================
+
             Usuario usuario =
                     usuarioRepository
                             .findByEmail(email)
@@ -104,37 +116,7 @@ public class JwtAuthenticationFilter
 
             if (usuario == null) {
 
-                filterChain.doFilter(
-                        request,
-                        response
-                );
-
-                return;
-            }
-
-
-            // =================================================
-            // DEBUG TEMPORAL
-            // =================================================
-
-            System.out.println("=== JWT DEBUG ===");
-            System.out.println("Email: " + usuario.getEmail());
-            System.out.println("Activo: " + usuario.isActivo());
-            System.out.println("TokenVersion BD: " + usuario.getTokenVersion());
-            System.out.println("TokenVersion JWT: " + jwtService.extraerTokenVersion(token));
-            System.out.println(
-                    "Rol: " +
-                            (usuario.getRol() != null
-                                    ? usuario.getRol().getNombre()
-                                    : "SIN ROL")
-            );
-
-
-            // =================================================
-            // 6. Verificar que siga activo
-            // =================================================
-
-            if (!usuario.isActivo()) {
+                SecurityContextHolder.clearContext();
 
                 filterChain.doFilter(
                         request,
@@ -146,21 +128,20 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 7. Verificar tokenVersion
+            // 6. COMPROBAR BAJA LÓGICA
             // =================================================
 
-            Integer tokenVersion =
-                    jwtService.extraerTokenVersion(
-                            token
-                    );
+            /*
+             * fechaBaja == null
+             *      → usuario activo
+             *
+             * fechaBaja != null
+             *      → usuario dado de baja
+             */
 
+            if (usuario.getFechaBaja() != null) {
 
-            if (
-                    tokenVersion == null
-                            || !tokenVersion.equals(
-                            usuario.getTokenVersion()
-                    )
-            ) {
+                SecurityContextHolder.clearContext();
 
                 filterChain.doFilter(
                         request,
@@ -172,10 +153,12 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 8. Verificar rol
+            // 7. COMPROBAR ROL
             // =================================================
 
             if (usuario.getRol() == null) {
+
+                SecurityContextHolder.clearContext();
 
                 filterChain.doFilter(
                         request,
@@ -192,8 +175,24 @@ public class JwtAuthenticationFilter
                             .getNombre();
 
 
-            // Spring Security utiliza ROLE_ADMIN
-            // cuando usamos hasRole("ADMIN")
+            // =================================================
+            // 8. CREAR AUTHORITY
+            // =================================================
+
+            /*
+             * Si en BD tenemos:
+             *
+             * ADMIN
+             *
+             * Spring recibirá:
+             *
+             * ROLE_ADMIN
+             *
+             * Esto permite utilizar:
+             *
+             * .hasRole("ADMIN")
+             */
+
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority(
                             "ROLE_" + rol
@@ -201,7 +200,7 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 9. Crear autenticación de Spring
+            // 9. CREAR AUTENTICACIÓN
             // =================================================
 
             UsernamePasswordAuthenticationToken authentication =
@@ -213,7 +212,7 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 10. Registrar usuario como autenticado
+            // 10. GUARDAR AUTENTICACIÓN EN SPRING SECURITY
             // =================================================
 
             SecurityContextHolder
@@ -223,43 +222,60 @@ public class JwtAuthenticationFilter
                     );
 
 
-            // =================================================
-            // DEBUG TEMPORAL
-            // =================================================
-
-            System.out.println("Authority creada: " + authority);
-            System.out.println("Autenticado: " + authentication.isAuthenticated());
-            System.out.println("=================");
-
         } catch (Exception exception) {
 
             /*
-             * Token inválido, alterado, vencido, etc.
+             * Puede entrar aquí si:
              *
-             * No autenticamos al usuario.
-             * SecurityConfig decidirá si puede
-             * acceder a la ruta.
+             * - el JWT fue modificado
+             * - la firma no coincide
+             * - está vencido
+             * - tiene una estructura incorrecta
              */
-
-            // ============================================
-            // DEBUG TEMPORAL
-            // ============================================
-
-            System.out.println("=== ERROR JWT FILTER ===");
-            exception.printStackTrace();
-            System.out.println("========================");
 
             SecurityContextHolder.clearContext();
         }
 
 
         // =====================================================
-        // 11. Continuar con la petición
+        // 11. CONTINUAR PETICIÓN
         // =====================================================
 
         filterChain.doFilter(
                 request,
                 response
         );
+    }
+
+
+    // =========================================================
+    // OBTENER JWT DESDE COOKIE
+    // =========================================================
+
+    private String obtenerTokenDeCookie(
+            HttpServletRequest request
+    ) {
+
+        Cookie[] cookies =
+                request.getCookies();
+
+
+        // No llegaron cookies
+        if (cookies == null) {
+            return null;
+        }
+
+
+        // Buscar específicamente la cookie "jwt"
+        for (Cookie cookie : cookies) {
+
+            if ("jwt".equals(cookie.getName())) {
+
+                return cookie.getValue();
+            }
+        }
+
+
+        return null;
     }
 }

@@ -19,12 +19,12 @@ public class Rol {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(
+            nullable = false,
+            unique = true,
+            length = 50
+    )
     private String nombre;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rol_id", nullable = false)
-    private Rol rol;
 
     @OneToMany(mappedBy = "rol")
     @Builder.Default
