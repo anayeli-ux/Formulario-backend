@@ -4,6 +4,7 @@ import com.example.practica.dto.DireccionResponseDTO;
 import com.example.practica.dto.TelefonoResponseDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
+import com.example.practica.dto.UsuarioUpdateRequestDTO;
 
 import com.example.practica.model.Direccion;
 import com.example.practica.model.Telefono;
@@ -34,7 +35,7 @@ public class UsuarioMapper {
 
 
     // =========================================================
-    // ACTUALIZAR ENTITY EXISTENTE
+    // ACTUALIZAR ENTITY EXISTENTE (desde UsuarioRequestDTO)
     // =========================================================
 
     public void updateEntity(
@@ -53,6 +54,28 @@ public class UsuarioMapper {
          * y de aplicar BCrypt.
          *
          * fechaBaja tampoco se modifica al editar.
+         */
+    }
+
+
+    // =========================================================
+    // ACTUALIZAR ENTITY EXISTENTE (desde UsuarioUpdateRequestDTO)
+    // =========================================================
+
+    public void updateEntity(
+            Usuario usuario,
+            UsuarioUpdateRequestDTO dto
+    ) {
+
+        usuario.setNombre(dto.getNombre());
+        usuario.setPrimerApellido(dto.getPrimerApellido());
+        usuario.setFechaNacimiento(dto.getFechaNacimiento());
+        usuario.setEmail(dto.getEmail());
+
+        /*
+         * La contraseña NO se modifica aquí.
+         * UsuarioServiceImpl decide si debe cambiarse
+         * y aplica BCrypt.
          */
     }
 

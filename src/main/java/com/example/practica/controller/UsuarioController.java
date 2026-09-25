@@ -1,5 +1,5 @@
 package com.example.practica.controller;
-
+import com.example.practica.dto.UsuarioUpdateRequestDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.service.UsuarioService;
@@ -119,19 +119,12 @@ public class UsuarioController {
     // =====================================================
 
     @PutMapping("/{id}")
-    public ResponseEntity<UsuarioResponseDTO>
-    actualizarUsuario(
+    public ResponseEntity<UsuarioResponseDTO> actualizarUsuario(
             @PathVariable Long id,
-            @Valid
-            @RequestBody
-            UsuarioRequestDTO usuario
-    ) {
+            @Valid @RequestBody UsuarioUpdateRequestDTO usuario) {
 
         return ResponseEntity.ok(
-                service.actualizarUsuario(
-                        id,
-                        usuario
-                )
+                service.actualizarUsuario(id, usuario)
         );
     }
 

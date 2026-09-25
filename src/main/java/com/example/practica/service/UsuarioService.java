@@ -1,5 +1,5 @@
 package com.example.practica.service;
-
+import com.example.practica.dto.UsuarioUpdateRequestDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 
@@ -25,7 +25,7 @@ public interface UsuarioService {
 
     UsuarioResponseDTO actualizarUsuario(
             Long id,
-            UsuarioRequestDTO usuario
+            UsuarioUpdateRequestDTO usuario
     );
 
     boolean eliminarUsuario(Long id);
