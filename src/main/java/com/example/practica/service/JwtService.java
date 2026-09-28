@@ -41,7 +41,8 @@ public class JwtService {
     // =========================================================
 
     public String generarToken(
-            Usuario usuario
+            Usuario usuario,
+            String emailPrincipal
     ) {
 
         Date ahora = new Date();
@@ -53,10 +54,9 @@ public class JwtService {
 
         return Jwts.builder()
 
-                // Identificador del usuario
-                .subject(
-                        usuario.getEmail()
-                )
+                // El subject es el correo PRINCIPAL.
+                // No guardamos ID ni tokenVersion.
+                .subject(emailPrincipal)
 
                 // Rol
                 .claim(
@@ -66,13 +66,10 @@ public class JwtService {
                                 .getNombre()
                 )
 
-                // Fecha de creación
                 .issuedAt(ahora)
 
-                // Fecha de expiración
                 .expiration(expiracion)
 
-                // Firma
                 .signWith(secretKey)
 
                 .compact();
@@ -96,7 +93,7 @@ public class JwtService {
 
 
     // =========================================================
-    // EXTRAER EMAIL
+    // EXTRAER EMAIL PRINCIPAL
     // =========================================================
 
     public String extraerEmail(

@@ -30,15 +30,11 @@ public class Usuario {
     @Column(name = "fecha_nacimiento", nullable = false)
     private LocalDate fechaNacimiento;
 
-    @Column(nullable = false, unique = true)
-    private String email;
-
     @Column(nullable = false)
     private String password;
 
     @Column(name = "fecha_baja")
     private LocalDateTime fechaBaja;
-
 
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;
@@ -63,8 +59,17 @@ public class Usuario {
     @Builder.Default
     private List<Direccion> direcciones = new ArrayList<>();
 
+    @OneToMany(
+            mappedBy = "usuario",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<Email> emails = new ArrayList<>();
+
     @PrePersist
     protected void prePersist() {
+
         if (fechaCreacion == null) {
             fechaCreacion = LocalDateTime.now();
         }

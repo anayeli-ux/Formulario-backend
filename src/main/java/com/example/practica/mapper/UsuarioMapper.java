@@ -1,5 +1,6 @@
 package com.example.practica.mapper;
 
+import com.example.practica.dto.CorreoResponseDTO;
 import com.example.practica.dto.DireccionResponseDTO;
 import com.example.practica.dto.TelefonoResponseDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
@@ -7,6 +8,7 @@ import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioUpdateRequestDTO;
 
 import com.example.practica.model.Direccion;
+import com.example.practica.model.Email;
 import com.example.practica.model.Telefono;
 import com.example.practica.model.Usuario;
 
@@ -18,7 +20,7 @@ import java.util.List;
 public class UsuarioMapper {
 
     // =========================================================
-    // REQUEST DTO -> ENTITY USUARIO
+    // REQUEST -> ENTITY
     // =========================================================
 
     public Usuario toEntity(UsuarioRequestDTO dto) {
@@ -27,7 +29,6 @@ public class UsuarioMapper {
                 .nombre(dto.getNombre())
                 .primerApellido(dto.getPrimerApellido())
                 .fechaNacimiento(dto.getFechaNacimiento())
-                .email(dto.getEmail())
                 .password(dto.getPassword())
                 .fechaBaja(null)
                 .build();
@@ -35,31 +36,7 @@ public class UsuarioMapper {
 
 
     // =========================================================
-    // ACTUALIZAR ENTITY EXISTENTE (desde UsuarioRequestDTO)
-    // =========================================================
-
-    public void updateEntity(
-            Usuario usuario,
-            UsuarioRequestDTO dto
-    ) {
-
-        usuario.setNombre(dto.getNombre());
-        usuario.setPrimerApellido(dto.getPrimerApellido());
-        usuario.setFechaNacimiento(dto.getFechaNacimiento());
-        usuario.setEmail(dto.getEmail());
-
-        /*
-         * La contraseña no se modifica aquí.
-         * El Service se encarga de decidir si debe cambiar
-         * y de aplicar BCrypt.
-         *
-         * fechaBaja tampoco se modifica al editar.
-         */
-    }
-
-
-    // =========================================================
-    // ACTUALIZAR ENTITY EXISTENTE (desde UsuarioUpdateRequestDTO)
+    // UPDATE -> ENTITY
     // =========================================================
 
     public void updateEntity(
@@ -70,24 +47,22 @@ public class UsuarioMapper {
         usuario.setNombre(dto.getNombre());
         usuario.setPrimerApellido(dto.getPrimerApellido());
         usuario.setFechaNacimiento(dto.getFechaNacimiento());
-        usuario.setEmail(dto.getEmail());
 
         /*
-         * La contraseña NO se modifica aquí.
-         * UsuarioServiceImpl decide si debe cambiarse
-         * y aplica BCrypt.
+         * password se modifica en el Service
+         * porque ahí se aplica BCrypt.
+         *
+         * fechaBaja tampoco se modifica aquí.
          */
     }
 
 
     // =========================================================
-    // ENTITY -> RESPONSE DTO
+    // ENTITY -> RESPONSE
     // =========================================================
 
     public UsuarioResponseDTO toResponseDTO(
-            Usuario usuario,
-            String estado,
-            String municipio
+            Usuario usuario
     ) {
 
         List<TelefonoResponseDTO> telefonos =
@@ -96,123 +71,38 @@ public class UsuarioMapper {
                         .map(this::telefonoToResponse)
                         .toList();
 
+        List<CorreoResponseDTO> correos =
+                usuario.getEmails()
+                        .stream()
+                        .map(this::correoToResponse)
+                        .toList();
+
         List<DireccionResponseDTO> direcciones =
                 usuario.getDirecciones()
                         .stream()
                         .map(this::direccionToResponse)
                         .toList();
 
-
-        // -----------------------------------------------------
-        // Obtener teléfono principal
-        // -----------------------------------------------------
-
-        Telefono telefonoPrincipal =
-                usuario.getTelefonos()
-                        .stream()
-                        .filter(t ->
-                                "PRINCIPAL".equalsIgnoreCase(
-                                        t.getCategoria()
-                                )
-                        )
-                        .findFirst()
-                        .orElseGet(() ->
-                                usuario.getTelefonos()
-                                        .stream()
-                                        .findFirst()
-                                        .orElse(null)
-                        );
-
-
-        // -----------------------------------------------------
-        // Obtener dirección principal
-        // -----------------------------------------------------
-
-        Direccion direccionPrincipal =
-                usuario.getDirecciones()
-                        .stream()
-                        .filter(d ->
-                                "PRINCIPAL".equalsIgnoreCase(
-                                        d.getCategoria()
-                                )
-                        )
-                        .findFirst()
-                        .orElseGet(() ->
-                                usuario.getDirecciones()
-                                        .stream()
-                                        .findFirst()
-                                        .orElse(null)
-                        );
-
-
         return UsuarioResponseDTO.builder()
-
                 .id(usuario.getId())
-
                 .nombre(usuario.getNombre())
-
-                .primerApellido(
-                        usuario.getPrimerApellido()
-                )
-
-                // Campo principal para compatibilidad
-                // con el frontend actual.
-                .telefono(
-                        telefonoPrincipal != null
-                                ? telefonoPrincipal.getTelefono()
-                                : null
-                )
-
-                .codigoPostal(
-                        direccionPrincipal != null
-                                && direccionPrincipal.getCodigoPostal() != null
-
-                                ? direccionPrincipal
-                                .getCodigoPostal()
-                                .getCodigoPostal()
-
-                                : null
-                )
-
-                .estado(estado)
-
-                .municipio(municipio)
-
-                .direccion(
-                        direccionPrincipal != null
-                                ? direccionPrincipal.getDireccion()
-                                : null
-                )
-
-                .fechaNacimiento(
-                        usuario.getFechaNacimiento()
-                )
-
-                .email(
-                        usuario.getEmail()
-                )
-
-                .fechaBaja(
-                        usuario.getFechaBaja()
-                )
-
+                .primerApellido(usuario.getPrimerApellido())
+                .fechaNacimiento(usuario.getFechaNacimiento())
+                .fechaBaja(usuario.getFechaBaja())
                 .rol(
                         usuario.getRol() != null
                                 ? usuario.getRol().getNombre()
                                 : null
                 )
-
-                // Nuevas colecciones
                 .telefonos(telefonos)
-
+                .correos(correos)
                 .direcciones(direcciones)
-
                 .build();
     }
 
 
     // =========================================================
-    // TELEFONO -> TELEFONO RESPONSE DTO
+    // TELEFONO -> RESPONSE
     // =========================================================
 
     private TelefonoResponseDTO telefonoToResponse(
@@ -228,7 +118,23 @@ public class UsuarioMapper {
 
 
     // =========================================================
-    // DIRECCION -> DIRECCION RESPONSE DTO
+    // CORREO -> RESPONSE
+    // =========================================================
+
+    private CorreoResponseDTO correoToResponse(
+            Email email
+    ) {
+
+        return CorreoResponseDTO.builder()
+                .id(email.getId())
+                .tipo(email.getTipo())
+                .valor(email.getValor())
+                .build();
+    }
+
+
+    // =========================================================
+    // DIRECCION -> RESPONSE
     // =========================================================
 
     private DireccionResponseDTO direccionToResponse(
@@ -239,15 +145,12 @@ public class UsuarioMapper {
                 .id(direccion.getId())
                 .tipo(direccion.getCategoria())
                 .valor(direccion.getDireccion())
-
                 .codigoPostal(
                         direccion.getCodigoPostal() != null
-                                ? direccion
-                                .getCodigoPostal()
+                                ? direccion.getCodigoPostal()
                                 .getCodigoPostal()
                                 : null
                 )
-
                 .build();
     }
 }

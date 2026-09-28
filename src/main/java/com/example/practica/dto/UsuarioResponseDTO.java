@@ -20,20 +20,7 @@ public class UsuarioResponseDTO {
 
     private String primerApellido;
 
-    // Datos principales
-    private String telefono;
-
-    private String codigoPostal;
-
-    private String estado;
-
-    private String municipio;
-
-    private String direccion;
-
     private LocalDate fechaNacimiento;
-
-    private String email;
 
     // null = activo
     // fecha/hora = dado de baja
@@ -41,12 +28,14 @@ public class UsuarioResponseDTO {
 
     private String rol;
 
-    // Todos los teléfonos
     @Builder.Default
     private List<TelefonoResponseDTO> telefonos =
             new ArrayList<>();
 
-    // Todas las direcciones
+    @Builder.Default
+    private List<CorreoResponseDTO> correos =
+            new ArrayList<>();
+
     @Builder.Default
     private List<DireccionResponseDTO> direcciones =
             new ArrayList<>();

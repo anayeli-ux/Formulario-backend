@@ -1,7 +1,8 @@
 package com.example.practica.config;
 
+import com.example.practica.model.Email;
 import com.example.practica.model.Usuario;
-import com.example.practica.repository.UsuarioRepository;
+import com.example.practica.repository.EmailRepository;
 import com.example.practica.service.JwtService;
 
 import jakarta.servlet.FilterChain;
@@ -27,7 +28,7 @@ public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UsuarioRepository usuarioRepository;
+    private final EmailRepository emailRepository;
 
 
     @Override
@@ -38,25 +39,16 @@ public class JwtAuthenticationFilter
     ) throws ServletException, IOException {
 
         // =====================================================
-        // 1. BUSCAR JWT EN LAS COOKIES
+        // 1. BUSCAR JWT EN COOKIE
         // =====================================================
 
-        String token = obtenerTokenDeCookie(request);
+        String token =
+                obtenerTokenDeCookie(request);
 
 
         // =====================================================
-        // 2. SI NO HAY COOKIE JWT, CONTINUAR
+        // 2. SI NO HAY JWT, CONTINUAR
         // =====================================================
-
-        /*
-         * No significa que automáticamente tenga acceso.
-         *
-         * SecurityConfig decidirá después si la ruta:
-         *
-         * - es pública
-         * - requiere autenticación
-         * - requiere ADMIN
-         */
 
         if (token == null || token.isBlank()) {
 
@@ -75,14 +67,6 @@ public class JwtAuthenticationFilter
             // 3. VALIDAR JWT
             // =================================================
 
-            /*
-             * JwtService comprueba:
-             *
-             * - firma
-             * - estructura
-             * - expiración
-             */
-
             if (!jwtService.esTokenValido(token)) {
 
                 SecurityContextHolder.clearContext();
@@ -97,24 +81,27 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 4. EXTRAER EMAIL DEL JWT
+            // 4. EXTRAER CORREO PRINCIPAL
             // =================================================
 
-            String email =
+            String emailPrincipal =
                     jwtService.extraerEmail(token);
 
 
             // =================================================
-            // 5. BUSCAR USUARIO ACTUAL EN LA BD
+            // 5. BUSCAR ESE CORREO COMO PRINCIPAL
             // =================================================
 
-            Usuario usuario =
-                    usuarioRepository
-                            .findByEmail(email)
+            Email correoPrincipal =
+                    emailRepository
+                            .findByValorIgnoreCaseAndTipoIgnoreCase(
+                                    emailPrincipal,
+                                    "PRINCIPAL"
+                            )
                             .orElse(null);
 
 
-            if (usuario == null) {
+            if (correoPrincipal == null) {
 
                 SecurityContextHolder.clearContext();
 
@@ -127,17 +114,13 @@ public class JwtAuthenticationFilter
             }
 
 
+            Usuario usuario =
+                    correoPrincipal.getUsuario();
+
+
             // =================================================
             // 6. COMPROBAR BAJA LÓGICA
             // =================================================
-
-            /*
-             * fechaBaja == null
-             *      → usuario activo
-             *
-             * fechaBaja != null
-             *      → usuario dado de baja
-             */
 
             if (usuario.getFechaBaja() != null) {
 
@@ -153,7 +136,7 @@ public class JwtAuthenticationFilter
 
 
             // =================================================
-            // 7. COMPROBAR ROL
+            // 7. COMPROBAR ROL ACTUAL EN BD
             // =================================================
 
             if (usuario.getRol() == null) {
@@ -179,20 +162,6 @@ public class JwtAuthenticationFilter
             // 8. CREAR AUTHORITY
             // =================================================
 
-            /*
-             * Si en BD tenemos:
-             *
-             * ADMIN
-             *
-             * Spring recibirá:
-             *
-             * ROLE_ADMIN
-             *
-             * Esto permite utilizar:
-             *
-             * .hasRole("ADMIN")
-             */
-
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority(
                             "ROLE_" + rol
@@ -205,14 +174,14 @@ public class JwtAuthenticationFilter
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
-                            email,
+                            correoPrincipal.getValor(),
                             null,
                             List.of(authority)
                     );
 
 
             // =================================================
-            // 10. GUARDAR AUTENTICACIÓN EN SPRING SECURITY
+            // 10. GUARDAR EN SECURITY CONTEXT
             // =================================================
 
             SecurityContextHolder
@@ -224,21 +193,12 @@ public class JwtAuthenticationFilter
 
         } catch (Exception exception) {
 
-            /*
-             * Puede entrar aquí si:
-             *
-             * - el JWT fue modificado
-             * - la firma no coincide
-             * - está vencido
-             * - tiene una estructura incorrecta
-             */
-
             SecurityContextHolder.clearContext();
         }
 
 
         // =====================================================
-        // 11. CONTINUAR PETICIÓN
+        // 11. CONTINUAR
         // =====================================================
 
         filterChain.doFilter(
@@ -259,22 +219,16 @@ public class JwtAuthenticationFilter
         Cookie[] cookies =
                 request.getCookies();
 
-
-        // No llegaron cookies
         if (cookies == null) {
             return null;
         }
 
-
-        // Buscar específicamente la cookie "jwt"
         for (Cookie cookie : cookies) {
 
             if ("jwt".equals(cookie.getName())) {
-
                 return cookie.getValue();
             }
         }
-
 
         return null;
     }

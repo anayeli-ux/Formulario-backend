@@ -42,51 +42,27 @@ public class UsuarioRequestDTO {
     )
     private String password;
 
-    /*
-     * Datos principales.
-     * Se conservan porque el frontend todavía los envía.
-     */
-    @NotBlank(message = "El teléfono es obligatorio")
-    @Pattern(
-            regexp = "^\\d{10}$",
-            message = "El teléfono debe contener exactamente 10 dígitos"
-    )
-    private String telefono;
-
-    @NotBlank(message = "El código postal es obligatorio")
-    @Pattern(
-            regexp = "^\\d{5}$",
-            message = "El código postal debe contener exactamente 5 dígitos"
-    )
-    private String codigoPostal;
-
-    @NotBlank(message = "La dirección es obligatoria")
-    @Size(
-            max = 255,
-            message = "La dirección no puede superar los 255 caracteres"
-    )
-    private String direccion;
-
     @NotNull(message = "La fecha de nacimiento es obligatoria")
-    @Past(message = "La fecha de nacimiento debe ser anterior a la fecha actual")
+    @Past(
+            message = "La fecha de nacimiento debe ser anterior a la fecha actual"
+    )
     private LocalDate fechaNacimiento;
 
-    @NotBlank(message = "El correo electrónico es obligatorio")
-    @Email(message = "El correo electrónico no tiene un formato válido")
-    @Size(
-            max = 255,
-            message = "El correo electrónico no puede superar los 255 caracteres"
-    )
-    private String email;
-
-    /*
-     * Nuevos datos relacionados.
-     */
+    @NotEmpty(message = "Debe registrar al menos un teléfono")
     @Valid
     @Builder.Default
-    private List<TelefonoRequest> telefonos = new ArrayList<>();
+    private List<TelefonoRequest> telefonos =
+            new ArrayList<>();
 
+    @NotEmpty(message = "Debe registrar al menos un correo")
     @Valid
     @Builder.Default
-    private List<DireccionRequest> direcciones = new ArrayList<>();
+    private List<CorreoRequest> correos =
+            new ArrayList<>();
+
+    @NotEmpty(message = "Debe registrar al menos una dirección")
+    @Valid
+    @Builder.Default
+    private List<DireccionRequest> direcciones =
+            new ArrayList<>();
 }

@@ -3,8 +3,11 @@ package com.example.practica.service;
 import com.example.practica.dto.LoginRequest;
 import com.example.practica.dto.LoginResponse;
 import com.example.practica.dto.UsuarioLoginDTO;
+
+import com.example.practica.model.Email;
 import com.example.practica.model.Usuario;
-import com.example.practica.repository.UsuarioRepository;
+
+import com.example.practica.repository.EmailRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -13,34 +16,35 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl implements AuthService {
+public class AuthServiceImpl
+        implements AuthService {
 
-    private final UsuarioRepository usuarioRepository;
+    private final EmailRepository emailRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+
 
     @Override
     public LoginResponse login(
             LoginRequest request
     ) {
 
-        // ==========================================
-        // 1. Obtener email
-        // ==========================================
-
-        String email =
+        String correo =
                 request.getUsuario()
                         .trim()
                         .toLowerCase();
 
 
-        // ==========================================
-        // 2. Buscar usuario
-        // ==========================================
+        // =====================================================
+        // SOLO SE PUEDE INICIAR SESIÓN CON EL CORREO PRINCIPAL
+        // =====================================================
 
-        Usuario usuario =
-                usuarioRepository
-                        .findByEmail(email)
+        Email correoPrincipal =
+                emailRepository
+                        .findByValorIgnoreCaseAndTipoIgnoreCase(
+                                correo,
+                                "PRINCIPAL"
+                        )
                         .orElseThrow(
                                 () -> new RuntimeException(
                                         "Credenciales incorrectas"
@@ -48,29 +52,32 @@ public class AuthServiceImpl implements AuthService {
                         );
 
 
-        // ==========================================
-        // 3. Verificar baja lógica
-        // ==========================================
+        Usuario usuario =
+                correoPrincipal.getUsuario();
+
+
+        // =====================================================
+        // USUARIO DADO DE BAJA
+        // =====================================================
 
         if (usuario.getFechaBaja() != null) {
 
             throw new RuntimeException(
-                    "El usuario se encuentra inactivo"
+                    "Usuario inactivo"
             );
         }
 
 
-        // ==========================================
-        // 4. Verificar contraseña
-        // ==========================================
+        // =====================================================
+        // CONTRASEÑA
+        // =====================================================
 
-        boolean passwordCorrecto =
-                passwordEncoder.matches(
+        if (
+                !passwordEncoder.matches(
                         request.getPassword(),
                         usuario.getPassword()
-                );
-
-        if (!passwordCorrecto) {
+                )
+        ) {
 
             throw new RuntimeException(
                     "Credenciales incorrectas"
@@ -78,9 +85,9 @@ public class AuthServiceImpl implements AuthService {
         }
 
 
-        // ==========================================
-        // 5. Verificar rol
-        // ==========================================
+        // =====================================================
+        // ROL
+        // =====================================================
 
         if (usuario.getRol() == null) {
 
@@ -90,44 +97,39 @@ public class AuthServiceImpl implements AuthService {
         }
 
 
-        // ==========================================
-        // 6. Generar JWT
-        // ==========================================
+        // =====================================================
+        // GENERAR JWT
+        // =====================================================
 
         String token =
-                jwtService.generarToken(usuario);
+                jwtService.generarToken(
+                        usuario,
+                        correoPrincipal.getValor()
+                );
 
 
-        // ==========================================
-        // 7. Datos del usuario para Angular
-        // ==========================================
+        // =====================================================
+        // DATOS DE SESIÓN
+        // =====================================================
 
-        UsuarioLoginDTO usuarioResponse =
+        UsuarioLoginDTO usuarioLogin =
                 UsuarioLoginDTO.builder()
-
                         .id(usuario.getId())
-
-                        .email(usuario.getEmail())
-
+                        .email(
+                                correoPrincipal.getValor()
+                        )
                         .rol(
                                 usuario
                                         .getRol()
                                         .getNombre()
                         )
-
                         .build();
-        // ==========================================
-        // 8. Respuesta
-        // ==========================================
+
 
         return LoginResponse.builder()
-
                 .acceso(true)
-
                 .token(token)
-
-                .usuario(usuarioResponse)
-
+                .usuario(usuarioLogin)
                 .build();
     }
 }
