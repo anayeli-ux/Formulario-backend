@@ -49,20 +49,17 @@ public class UsuarioRequestDTO {
     private LocalDate fechaNacimiento;
 
     @NotEmpty(message = "Debe registrar al menos un teléfono")
-    @Valid
     @Builder.Default
-    private List<TelefonoRequest> telefonos =
+    private List<@Valid TelefonoRequest> telefonos =
             new ArrayList<>();
 
     @NotEmpty(message = "Debe registrar al menos un correo")
-    @Valid
     @Builder.Default
-    private List<CorreoRequest> correos =
+    private List<@Valid CorreoRequest> correos =
             new ArrayList<>();
 
     @NotEmpty(message = "Debe registrar al menos una dirección")
-    @Valid
     @Builder.Default
-    private List<DireccionRequest> direcciones =
+    private List<@Valid DireccionRequest> direcciones =
             new ArrayList<>();
 }
