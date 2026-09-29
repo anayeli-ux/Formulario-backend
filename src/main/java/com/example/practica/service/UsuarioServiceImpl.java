@@ -142,12 +142,12 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // ACTUALIZAR USUARIO
+    // ACTUALIZAR USUARIO (HTTP 204 - VOID)
     // =========================================================
 
     @Override
     @Transactional
-    public UsuarioResponseDTO actualizarUsuario(Long id, UsuarioUpdateRequestDTO dto) {
+    public void actualizarUsuario(Long id, UsuarioUpdateRequestDTO dto) {
 
         Usuario usuario = usuarioRepository
                 .findByIdAndFechaBajaIsNull(id)
@@ -182,9 +182,8 @@ public class UsuarioServiceImpl implements UsuarioService {
             actualizarDireccionesDiferencial(usuario, dto.getDirecciones());
         }
 
-        Usuario actualizado = usuarioRepository.save(usuario);
-
-        return usuarioMapper.toResponseDTO(actualizado);
+        // Al ser una entidad administrada dentro de @Transactional,
+        // Hibernate aplicará dirty checking al finalizar sin necesidad de save() ni return.
     }
 
 
@@ -260,23 +259,10 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             List<TelefonoRequest> nuevos
     ) {
-        /*
-         * Construimos las claves recibidas desde Angular.
-         *
-         * Ejemplo:
-         * PRINCIPAL|7711234567
-         * TRABAJO|7719876543
-         */
         Set<String> clavesNuevas = nuevos.stream()
                 .map(t -> normalizarCategoria(t.getTipo()) + "|" + t.getValor().trim())
                 .collect(Collectors.toSet());
 
-        /*
-         * Eliminamos únicamente los teléfonos
-         * que ya no existen en la petición.
-         *
-         * orphanRemoval=true hará el DELETE.
-         */
         usuario.getTelefonos().removeIf(actual -> {
             String claveActual = normalizarCategoria(actual.getCategoria())
                     + "|"
@@ -284,16 +270,10 @@ public class UsuarioServiceImpl implements UsuarioService {
             return !clavesNuevas.contains(claveActual);
         });
 
-        /*
-         * Obtenemos las claves que permanecieron.
-         */
         Set<String> clavesActuales = usuario.getTelefonos().stream()
                 .map(actual -> normalizarCategoria(actual.getCategoria()) + "|" + actual.getTelefono().trim())
                 .collect(Collectors.toSet());
 
-        /*
-         * Insertamos solamente los teléfonos nuevos.
-         */
         for (TelefonoRequest request : nuevos) {
             String valor = request.getValor().trim();
             String clave = normalizarCategoria(request.getTipo()) + "|" + valor;
@@ -348,21 +328,10 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             List<CorreoRequest> nuevos
     ) {
-        /*
-         * Correos recibidos desde Angular.
-         *
-         * Ejemplo:
-         * PRINCIPAL|correo@gmail.com
-         * TRABAJO|correo@empresa.com
-         */
         Set<String> clavesNuevas = nuevos.stream()
                 .map(c -> normalizarCategoria(c.getTipo()) + "|" + normalizarCorreo(c.getValor()))
                 .collect(Collectors.toSet());
 
-        /*
-         * Eliminamos únicamente los correos
-         * que dejaron de existir.
-         */
         usuario.getEmails().removeIf(actual -> {
             String claveActual = normalizarCategoria(actual.getTipo())
                     + "|"
@@ -370,16 +339,10 @@ public class UsuarioServiceImpl implements UsuarioService {
             return !clavesNuevas.contains(claveActual);
         });
 
-        /*
-         * Correos que permanecieron sin cambios.
-         */
         Set<String> clavesActuales = usuario.getEmails().stream()
                 .map(actual -> normalizarCategoria(actual.getTipo()) + "|" + normalizarCorreo(actual.getValor()))
                 .collect(Collectors.toSet());
 
-        /*
-         * Insertamos solamente los correos nuevos.
-         */
         for (CorreoRequest request : nuevos) {
             String valor = normalizarCorreo(request.getValor());
             String clave = normalizarCategoria(request.getTipo()) + "|" + valor;

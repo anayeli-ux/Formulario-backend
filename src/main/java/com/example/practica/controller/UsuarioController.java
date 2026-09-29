@@ -119,13 +119,13 @@ public class UsuarioController {
     // =====================================================
 
     @PutMapping("/{id}")
-    public ResponseEntity<UsuarioResponseDTO> actualizarUsuario(
+    public ResponseEntity<Void> actualizarUsuario(
             @PathVariable Long id,
             @Valid @RequestBody UsuarioUpdateRequestDTO usuario) {
 
-        return ResponseEntity.ok(
-                service.actualizarUsuario(id, usuario)
-        );
+        service.actualizarUsuario(id, usuario);
+
+        return ResponseEntity.noContent().build();
     }
 
 
