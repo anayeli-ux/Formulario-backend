@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "usuarios", schema = "public")
@@ -48,6 +49,7 @@ public class Usuario {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+    @BatchSize(size = 50)
     @Builder.Default
     private List<Telefono> telefonos = new ArrayList<>();
 
@@ -56,6 +58,7 @@ public class Usuario {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+    @BatchSize(size = 50)
     @Builder.Default
     private List<Direccion> direcciones = new ArrayList<>();
 
@@ -64,6 +67,7 @@ public class Usuario {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+    @BatchSize(size = 50)
     @Builder.Default
     private List<Email> emails = new ArrayList<>();
 

@@ -157,9 +157,12 @@ public class JwtService {
 
         try {
 
-            extraerClaims(token);
+            Claims claims = extraerClaims(token);
 
-            return !estaExpirado(token);
+            Date expiracion = claims.getExpiration();
+
+            return expiracion != null
+                    && expiracion.after(new Date());
 
         } catch (Exception exception) {
 
