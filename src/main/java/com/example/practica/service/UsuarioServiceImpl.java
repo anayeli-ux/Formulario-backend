@@ -167,7 +167,16 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuarioMapper.updateEntity(usuario, dto);
 
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
-            usuario.setPassword(passwordEncoder.encode(dto.getPassword()));
+            boolean mismaPassword = passwordEncoder.matches(
+                    dto.getPassword(),
+                    usuario.getPassword()
+            );
+
+            if (!mismaPassword) {
+                usuario.setPassword(
+                        passwordEncoder.encode(dto.getPassword())
+                );
+            }
         }
 
         if (cambiaronTelefonos) {
@@ -321,44 +330,55 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // ACTUALIZAR CORREOS DIFERENCIAL
+    // ACTUALIZAR CORREOS DIFERENCIAL (VERSIÓN OPTIMIZADA)
     // =========================================================
 
     private void actualizarCorreosDiferencial(
             Usuario usuario,
             List<CorreoRequest> nuevos
     ) {
-        Set<String> clavesNuevas = nuevos.stream()
-                .map(c -> normalizarCategoria(c.getTipo()) + "|" + normalizarCorreo(c.getValor()))
+        // Categorías que llegaron desde el frontend
+        Set<String> categoriasNuevas = nuevos.stream()
+                .map(c -> normalizarCategoria(c.getTipo()))
                 .collect(Collectors.toSet());
 
-        usuario.getEmails().removeIf(actual -> {
-            String claveActual = normalizarCategoria(actual.getTipo())
-                    + "|"
-                    + normalizarCorreo(actual.getValor());
-            return !clavesNuevas.contains(claveActual);
-        });
+        // Eliminar correos cuyas categorías ya no vienen
+        usuario.getEmails().removeIf(
+                email -> !categoriasNuevas.contains(
+                        normalizarCategoria(email.getTipo())
+                )
+        );
 
-        Set<String> clavesActuales = usuario.getEmails().stream()
-                .map(actual -> normalizarCategoria(actual.getTipo()) + "|" + normalizarCorreo(actual.getValor()))
-                .collect(Collectors.toSet());
-
+        // Actualizar existentes o agregar nuevos
         for (CorreoRequest request : nuevos) {
+
+            String tipo = normalizarCategoria(request.getTipo());
             String valor = normalizarCorreo(request.getValor());
-            String clave = normalizarCategoria(request.getTipo()) + "|" + valor;
 
-            if (clavesActuales.contains(clave)) {
-                continue;
+            Email existente = usuario.getEmails()
+                    .stream()
+                    .filter(email ->
+                            normalizarCategoria(email.getTipo())
+                                    .equals(tipo)
+                    )
+                    .findFirst()
+                    .orElse(null);
+
+            if (existente != null) {
+                // IMPORTANTE:
+                // modificamos la misma fila de la BD.
+                existente.setValor(valor);
+            } else {
+                // Solo hacemos INSERT cuando realmente
+                // es una categoría nueva.
+                Email nuevo = Email.builder()
+                        .tipo(tipo)
+                        .valor(valor)
+                        .usuario(usuario)
+                        .build();
+
+                usuario.getEmails().add(nuevo);
             }
-
-            Email nuevo = Email.builder()
-                    .tipo(normalizarCategoria(request.getTipo()))
-                    .valor(valor)
-                    .usuario(usuario)
-                    .build();
-
-            usuario.getEmails().add(nuevo);
-            clavesActuales.add(clave);
         }
     }
 
