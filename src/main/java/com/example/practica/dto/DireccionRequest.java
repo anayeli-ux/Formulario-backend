@@ -12,6 +12,8 @@ import lombok.*;
 @Builder
 public class DireccionRequest {
 
+    private Long id;
+
     @NotBlank(message = "El tipo de dirección es obligatorio")
     private String tipo;
 

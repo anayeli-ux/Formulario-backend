@@ -5,9 +5,13 @@ import com.example.practica.dto.DireccionResponseDTO;
 import com.example.practica.dto.TelefonoResponseDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
+import com.example.practica.dto.UsuarioResumenDTO;
+import com.example.practica.dto.UsuarioContactosDTO;
+import com.example.practica.dto.ContactoVisibleDTO;
 import com.example.practica.dto.UsuarioUpdateRequestDTO;
 
 import com.example.practica.model.Direccion;
+import com.example.practica.model.CodigoPostal;
 import com.example.practica.model.Email;
 import com.example.practica.model.Telefono;
 import com.example.practica.model.Usuario;
@@ -99,6 +103,56 @@ public class UsuarioMapper {
                 .direcciones(direcciones)
                 .build();
     }
+
+    public UsuarioResumenDTO toResumenDTO(Usuario usuario) {
+        return UsuarioResumenDTO.builder()
+                .id(usuario.getId())
+                .nombre(usuario.getNombre())
+                .primerApellido(usuario.getPrimerApellido())
+                .rol(usuario.getRol() != null ? usuario.getRol().getNombre() : null)
+                .telefono(usuario.getTelefonos().stream()
+                        .filter(contacto -> "PRINCIPAL".equalsIgnoreCase(contacto.getCategoria()))
+                        .map(Telefono::getTelefono)
+                        .findFirst().orElse(null))
+                .correo(usuario.getEmails().stream()
+                        .filter(contacto -> "PRINCIPAL".equalsIgnoreCase(contacto.getTipo()))
+                        .map(Email::getValor)
+                        .findFirst().orElse(null))
+                .codigoPostal(usuario.getDirecciones().stream()
+                        .filter(direccion -> "PRINCIPAL".equalsIgnoreCase(direccion.getCategoria()))
+                        .map(Direccion::getCodigoPostal)
+                        .filter(java.util.Objects::nonNull)
+                        .map(CodigoPostal::getCodigoPostal)
+                        .findFirst().orElse(null))
+                .build();
+    }
+
+        public UsuarioContactosDTO toContactosDTO(UsuarioResponseDTO usuario) {
+                return UsuarioContactosDTO.builder()
+                                .id(usuario.getId())
+                                .nombre(usuario.getNombre())
+                                .primerApellido(usuario.getPrimerApellido())
+                        .telefonos(usuario.getTelefonos().stream()
+                                .map(contacto -> ContactoVisibleDTO.builder()
+                                        .tipo(contacto.getTipo())
+                                        .valor(contacto.getValor())
+                                        .build())
+                                .toList())
+                        .correos(usuario.getCorreos().stream()
+                                .map(contacto -> ContactoVisibleDTO.builder()
+                                        .tipo(contacto.getTipo())
+                                        .valor(contacto.getValor())
+                                        .build())
+                                .toList())
+                        .direcciones(usuario.getDirecciones().stream()
+                                .map(contacto -> ContactoVisibleDTO.builder()
+                                        .tipo(contacto.getTipo())
+                                        .valor(contacto.getValor())
+                                        .codigoPostal(contacto.getCodigoPostal())
+                                        .build())
+                                .toList())
+                                .build();
+        }
 
 
     // =========================================================

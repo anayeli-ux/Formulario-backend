@@ -1,8 +1,16 @@
 package com.example.practica.controller;
-import com.example.practica.dto.UsuarioUpdateRequestDTO;
+
+import com.example.practica.dto.CorreoResponseDTO;
+import com.example.practica.dto.UsuarioContactosDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
+import com.example.practica.dto.UsuarioResumenDTO;
+import com.example.practica.dto.UsuarioSesionDTO;
+import com.example.practica.dto.UsuarioUpdateRequestDTO;
 import com.example.practica.service.UsuarioService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import jakarta.validation.Valid;
 
@@ -11,156 +19,151 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
 
-    private final UsuarioService service;
+        private final UsuarioService service;
 
-    public UsuarioController(UsuarioService service) {
-        this.service = service;
-    }
+        public UsuarioController(UsuarioService service) {
+                this.service = service;
+        }
 
+        // =====================================================
+        // LISTAR USUARIOS ACTIVOS
+        // Solo ADMIN por SecurityConfig
+        // =====================================================
 
-    // =====================================================
-    // LISTAR USUARIOS ACTIVOS
-    // Solo ADMIN por SecurityConfig
-    // =====================================================
+        @GetMapping
+        public ResponseEntity<Page<UsuarioResumenDTO>> listarUsuarios(
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "5") int size,
+                        @RequestParam(defaultValue = "") String search) {
+                Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
+                return ResponseEntity.ok(service.listarResumenes(false, search, pageable));
+        }
 
-    @GetMapping
-    public ResponseEntity<List<UsuarioResponseDTO>>
-    listarUsuarios() {
+        // =====================================================
+        // LISTAR USUARIOS ELIMINADOS
+        // Solo ADMIN
+        // =====================================================
 
-        return ResponseEntity.ok(
-                service.listarUsuarios()
-        );
-    }
+        @GetMapping("/eliminados")
+        public ResponseEntity<Page<UsuarioResumenDTO>> listarUsuariosEliminados(
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "5") int size,
+                        @RequestParam(defaultValue = "") String search) {
+                Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
+                return ResponseEntity.ok(service.listarResumenes(true, search, pageable));
+        }
 
+        // =====================================================
+        // OBTENER MI PERFIL
+        // USER o ADMIN autenticado
+        // =====================================================
 
-    // =====================================================
-    // LISTAR USUARIOS ELIMINADOS
-    // Solo ADMIN
-    // =====================================================
+        @GetMapping("/me")
+        public ResponseEntity<UsuarioResponseDTO> obtenerMiPerfil(
+                        Authentication authentication) {
 
-    @GetMapping("/eliminados")
-    public ResponseEntity<List<UsuarioResponseDTO>>
-    listarUsuariosEliminados() {
+                String email = authentication.getName();
 
-        return ResponseEntity.ok(
-                service.listarUsuariosEliminados()
-        );
-    }
+                return ResponseEntity.ok(
+                                service.obtenerMiPerfil(email));
+        }
 
+        @GetMapping("/me/resumen")
+        public ResponseEntity<UsuarioSesionDTO> obtenerResumenSesion(Authentication authentication) {
+                UsuarioResponseDTO perfil = service.obtenerMiPerfil(authentication.getName());
+                String correo = perfil.getCorreos().stream()
+                                .filter(item -> "PRINCIPAL".equalsIgnoreCase(item.getTipo()))
+                                .map(CorreoResponseDTO::getValor)
+                                .findFirst()
+                                .orElse("");
+                return ResponseEntity.ok(UsuarioSesionDTO.builder()
+                                .id(perfil.getId())
+                                .nombre(perfil.getNombre())
+                                .primerApellido(perfil.getPrimerApellido())
+                                .email(correo)
+                                .rol(perfil.getRol())
+                                .build());
+        }
 
-    // =====================================================
-    // OBTENER MI PERFIL
-    // USER o ADMIN autenticado
-    // =====================================================
+        // =====================================================
+        // BUSCAR USUARIO POR ID
+        // Solo ADMIN
+        // =====================================================
 
-    @GetMapping("/me")
-    public ResponseEntity<UsuarioResponseDTO>
-    obtenerMiPerfil(
-            Authentication authentication
-    ) {
+        @GetMapping("/{id}/contactos")
+        public ResponseEntity<UsuarioContactosDTO> buscarContactos(@PathVariable Long id) {
+                return ResponseEntity.ok(service.buscarContactos(id));
+        }
 
-        String email =
-                authentication.getName();
+        @GetMapping("/{id}")
+        public ResponseEntity<UsuarioResponseDTO> buscarUsuario(
+                        @PathVariable Long id) {
 
-        return ResponseEntity.ok(
-                service.obtenerMiPerfil(email)
-        );
-    }
+                return ResponseEntity.ok(
+                                service.buscarUsuario(id));
+        }
 
+        // =====================================================
+        // CREAR USUARIO
+        // Registro público
+        // =====================================================
 
-    // =====================================================
-    // BUSCAR USUARIO POR ID
-    // Solo ADMIN
-    // =====================================================
+        @PostMapping
+        public ResponseEntity<UsuarioResponseDTO> crearUsuario(
+                        @Valid @RequestBody UsuarioRequestDTO usuario) {
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UsuarioResponseDTO>
-    buscarUsuario(
-            @PathVariable Long id
-    ) {
+                UsuarioResponseDTO creado = service.crearUsuario(usuario);
 
-        return ResponseEntity.ok(
-                service.buscarUsuario(id)
-        );
-    }
+                return ResponseEntity
+                                .status(HttpStatus.CREATED)
+                                .body(creado);
+        }
 
+        // =====================================================
+        // ACTUALIZAR USUARIO
+        // Solo ADMIN
+        // =====================================================
 
-    // =====================================================
-    // CREAR USUARIO
-    // Registro público
-    // =====================================================
+        @PutMapping("/{id}")
+        public ResponseEntity<Void> actualizarUsuario(
+                        @PathVariable Long id,
+                        @Valid @RequestBody UsuarioUpdateRequestDTO usuario) {
 
-    @PostMapping
-    public ResponseEntity<UsuarioResponseDTO>
-    crearUsuario(
-            @Valid
-            @RequestBody
-            UsuarioRequestDTO usuario
-    ) {
+                service.actualizarUsuario(id, usuario);
 
-        UsuarioResponseDTO creado =
-                service.crearUsuario(usuario);
+                return ResponseEntity.noContent().build();
+        }
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(creado);
-    }
+        // =====================================================
+        // BAJA LÓGICA
+        // Solo ADMIN
+        // =====================================================
 
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> eliminarUsuario(
+                        @PathVariable Long id) {
 
-    // =====================================================
-    // ACTUALIZAR USUARIO
-    // Solo ADMIN
-    // =====================================================
+                service.eliminarUsuario(id);
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Void> actualizarUsuario(
-            @PathVariable Long id,
-            @Valid @RequestBody UsuarioUpdateRequestDTO usuario) {
+                return ResponseEntity
+                                .noContent()
+                                .build();
+        }
 
-        service.actualizarUsuario(id, usuario);
+        // =====================================================
+        // REACTIVAR USUARIO
+        // Solo ADMIN
+        // =====================================================
 
-        return ResponseEntity.noContent().build();
-    }
+        @PutMapping("/{id}/reactivar")
+        public ResponseEntity<UsuarioResponseDTO> reactivarUsuario(
+                        @PathVariable Long id) {
 
-
-    // =====================================================
-    // BAJA LÓGICA
-    // Solo ADMIN
-    // =====================================================
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void>
-    eliminarUsuario(
-            @PathVariable Long id
-    ) {
-
-        service.eliminarUsuario(id);
-
-        return ResponseEntity
-                .noContent()
-                .build();
-    }
-
-
-    // =====================================================
-    // REACTIVAR USUARIO
-    // Solo ADMIN
-    // =====================================================
-
-    @PutMapping("/{id}/reactivar")
-    public ResponseEntity<UsuarioResponseDTO>
-    reactivarUsuario(
-            @PathVariable Long id
-    ) {
-
-        return ResponseEntity.ok(
-                service.reactivarUsuario(id)
-        );
-    }
+                return ResponseEntity.ok(
+                                service.reactivarUsuario(id));
+        }
 }

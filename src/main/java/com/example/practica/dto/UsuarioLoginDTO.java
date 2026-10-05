@@ -18,4 +18,8 @@ public class UsuarioLoginDTO {
     private String email;
 
     private String rol;
+
+    private String nombre;
+
+    private String primerApellido;
 }

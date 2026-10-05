@@ -12,6 +12,8 @@ import lombok.*;
 @Builder
 public class CorreoRequest {
 
+    private Long id;
+
     @NotBlank(message = "El tipo de correo es obligatorio")
     private String tipo;
 

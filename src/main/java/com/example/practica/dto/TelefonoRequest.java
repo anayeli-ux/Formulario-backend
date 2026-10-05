@@ -11,6 +11,8 @@ import lombok.*;
 @Builder
 public class TelefonoRequest {
 
+    private Long id;
+
     @NotBlank(message = "El tipo de teléfono es obligatorio")
     private String tipo;
 

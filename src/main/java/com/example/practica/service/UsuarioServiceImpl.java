@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -22,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -70,6 +73,23 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UsuarioResumenDTO> listarResumenes(boolean eliminados, String busqueda, Pageable pageable) {
+        String termino = busqueda == null ? "" : busqueda.trim();
+        Page<Usuario> usuarios;
+        if (termino.isEmpty()) {
+            usuarios = eliminados
+                    ? usuarioRepository.findByFechaBajaIsNotNullOrderByIdAsc(pageable)
+                    : usuarioRepository.findByFechaBajaIsNullOrderByIdAsc(pageable);
+        } else {
+            usuarios = eliminados
+                    ? usuarioRepository.buscarEliminados(termino, pageable)
+                    : usuarioRepository.buscarActivos(termino, pageable);
+        }
+        return usuarios.map(usuarioMapper::toResumenDTO);
+    }
+
 
     // =========================================================
     // BUSCAR POR ID
@@ -79,10 +99,16 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional(readOnly = true)
     public UsuarioResponseDTO buscarUsuario(Long id) {
         Usuario usuario = usuarioRepository
-                .findByIdAndFechaBajaIsNull(id)
+                .findById(id)
                 .orElseThrow(() -> new UsuarioNoEncontradoException(id));
 
         return usuarioMapper.toResponseDTO(usuario);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UsuarioContactosDTO buscarContactos(Long id) {
+        return usuarioMapper.toContactosDTO(buscarUsuario(id));
     }
 
 
@@ -156,13 +182,10 @@ public class UsuarioServiceImpl implements UsuarioService {
         validarEdad(dto.getFechaNacimiento());
         validarCategoriasPrincipales(dto.getTelefonos(), dto.getCorreos(), dto.getDirecciones());
 
+        validarIdsContactos(usuario, dto);
         validarTelefonosActualizacion(usuario, dto.getTelefonos());
         validarCorreosActualizacion(usuario, dto.getCorreos());
         validarDireccionesActualizacion(usuario, dto.getDirecciones());
-
-        boolean cambiaronTelefonos = telefonosCambiaron(usuario, dto.getTelefonos());
-        boolean cambiaronCorreos = correosCambiaron(usuario, dto.getCorreos());
-        boolean cambiaronDirecciones = direccionesCambiaron(usuario, dto.getDirecciones());
 
         usuarioMapper.updateEntity(usuario, dto);
 
@@ -179,17 +202,9 @@ public class UsuarioServiceImpl implements UsuarioService {
             }
         }
 
-        if (cambiaronTelefonos) {
-            actualizarTelefonosDiferencial(usuario, dto.getTelefonos());
-        }
-
-        if (cambiaronCorreos) {
-            actualizarCorreosDiferencial(usuario, dto.getCorreos());
-        }
-
-        if (cambiaronDirecciones) {
-            actualizarDireccionesDiferencial(usuario, dto.getDirecciones());
-        }
+        actualizarTelefonosDiferencial(usuario, dto.getTelefonos());
+        actualizarCorreosDiferencial(usuario, dto.getCorreos());
+        actualizarDireccionesDiferencial(usuario, dto.getDirecciones());
 
         // Al ser una entidad administrada dentro de @Transactional,
         // Hibernate aplicará dirty checking al finalizar sin necesidad de save() ni return.
@@ -268,37 +283,29 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             List<TelefonoRequest> nuevos
     ) {
-        Set<String> clavesNuevas = nuevos.stream()
-                .map(t -> normalizarCategoria(t.getTipo()) + "|" + t.getValor().trim())
+        Map<Long, Telefono> existentes = usuario.getTelefonos().stream()
+                .collect(Collectors.toMap(Telefono::getId, telefono -> telefono));
+        Set<Long> idsRecibidos = nuevos.stream()
+                .map(TelefonoRequest::getId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        usuario.getTelefonos().removeIf(actual -> {
-            String claveActual = normalizarCategoria(actual.getCategoria())
-                    + "|"
-                    + actual.getTelefono().trim();
-            return !clavesNuevas.contains(claveActual);
-        });
-
-        Set<String> clavesActuales = usuario.getTelefonos().stream()
-                .map(actual -> normalizarCategoria(actual.getCategoria()) + "|" + actual.getTelefono().trim())
-                .collect(Collectors.toSet());
+        usuario.getTelefonos().removeIf(actual -> !idsRecibidos.contains(actual.getId()));
 
         for (TelefonoRequest request : nuevos) {
             String valor = request.getValor().trim();
-            String clave = normalizarCategoria(request.getTipo()) + "|" + valor;
-
-            if (clavesActuales.contains(clave)) {
-                continue;
+            String categoria = normalizarCategoria(request.getTipo());
+            if (request.getId() != null) {
+                Telefono existente = existentes.get(request.getId());
+                existente.setTelefono(valor);
+                existente.setCategoria(categoria);
+            } else {
+                usuario.getTelefonos().add(Telefono.builder()
+                        .telefono(valor)
+                        .categoria(categoria)
+                        .usuario(usuario)
+                        .build());
             }
-
-            Telefono nuevo = Telefono.builder()
-                    .telefono(valor)
-                    .categoria(normalizarCategoria(request.getTipo()))
-                    .usuario(usuario)
-                    .build();
-
-            usuario.getTelefonos().add(nuevo);
-            clavesActuales.add(clave);
         }
     }
 
@@ -337,47 +344,28 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             List<CorreoRequest> nuevos
     ) {
-        // Categorías que llegaron desde el frontend
-        Set<String> categoriasNuevas = nuevos.stream()
-                .map(c -> normalizarCategoria(c.getTipo()))
+        Map<Long, Email> existentes = usuario.getEmails().stream()
+                .collect(Collectors.toMap(Email::getId, email -> email));
+        Set<Long> idsRecibidos = nuevos.stream()
+                .map(CorreoRequest::getId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // Eliminar correos cuyas categorías ya no vienen
-        usuario.getEmails().removeIf(
-                email -> !categoriasNuevas.contains(
-                        normalizarCategoria(email.getTipo())
-                )
-        );
+        usuario.getEmails().removeIf(actual -> !idsRecibidos.contains(actual.getId()));
 
-        // Actualizar existentes o agregar nuevos
         for (CorreoRequest request : nuevos) {
-
             String tipo = normalizarCategoria(request.getTipo());
             String valor = normalizarCorreo(request.getValor());
-
-            Email existente = usuario.getEmails()
-                    .stream()
-                    .filter(email ->
-                            normalizarCategoria(email.getTipo())
-                                    .equals(tipo)
-                    )
-                    .findFirst()
-                    .orElse(null);
-
-            if (existente != null) {
-                // IMPORTANTE:
-                // modificamos la misma fila de la BD.
+            if (request.getId() != null) {
+                Email existente = existentes.get(request.getId());
+                existente.setTipo(tipo);
                 existente.setValor(valor);
             } else {
-                // Solo hacemos INSERT cuando realmente
-                // es una categoría nueva.
-                Email nuevo = Email.builder()
+                usuario.getEmails().add(Email.builder()
                         .tipo(tipo)
                         .valor(valor)
                         .usuario(usuario)
-                        .build();
-
-                usuario.getEmails().add(nuevo);
+                        .build());
             }
         }
     }
@@ -423,38 +411,17 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             List<DireccionRequest> nuevas
     ) {
-        Set<String> clavesNuevas = nuevas.stream()
-                .map(d -> normalizarCategoria(d.getTipo())
-                        + "|"
-                        + claveDireccion(d.getValor(), d.getCodigoPostal())
-                )
+        Map<Long, Direccion> existentes = usuario.getDirecciones().stream()
+                .collect(Collectors.toMap(Direccion::getId, direccion -> direccion));
+        Set<Long> idsRecibidos = nuevas.stream()
+                .map(DireccionRequest::getId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        usuario.getDirecciones().removeIf(actual -> {
-            String claveActual = normalizarCategoria(actual.getCategoria())
-                    + "|"
-                    + claveDireccion(actual.getDireccion(), actual.getCodigoPostal().getCodigoPostal());
-            return !clavesNuevas.contains(claveActual);
-        });
-
-        Set<String> clavesActuales = usuario.getDirecciones().stream()
-                .map(actual -> normalizarCategoria(actual.getCategoria())
-                        + "|"
-                        + claveDireccion(actual.getDireccion(), actual.getCodigoPostal().getCodigoPostal())
-                )
-                .collect(Collectors.toSet());
-
+        usuario.getDirecciones().removeIf(actual -> !idsRecibidos.contains(actual.getId()));
         Map<String, CodigoPostal> cacheCodigosPostales = new HashMap<>();
 
         for (DireccionRequest request : nuevas) {
-            String clave = normalizarCategoria(request.getTipo())
-                    + "|"
-                    + claveDireccion(request.getValor(), request.getCodigoPostal());
-
-            if (clavesActuales.contains(clave)) {
-                continue;
-            }
-
             String cp = request.getCodigoPostal().trim();
             CodigoPostal codigoPostal = cacheCodigosPostales.get(cp);
 
@@ -463,15 +430,21 @@ public class UsuarioServiceImpl implements UsuarioService {
                 cacheCodigosPostales.put(cp, codigoPostal);
             }
 
-            Direccion nueva = Direccion.builder()
-                    .usuario(usuario)
-                    .categoria(normalizarCategoria(request.getTipo()))
-                    .direccion(request.getValor().trim())
-                    .codigoPostal(codigoPostal)
-                    .build();
-
-            usuario.getDirecciones().add(nueva);
-            clavesActuales.add(clave);
+            String categoria = normalizarCategoria(request.getTipo());
+            String valor = request.getValor().trim();
+            if (request.getId() != null) {
+                Direccion existente = existentes.get(request.getId());
+                existente.setCategoria(categoria);
+                existente.setDireccion(valor);
+                existente.setCodigoPostal(codigoPostal);
+            } else {
+                usuario.getDirecciones().add(Direccion.builder()
+                        .usuario(usuario)
+                        .categoria(categoria)
+                        .direccion(valor)
+                        .codigoPostal(codigoPostal)
+                        .build());
+            }
         }
     }
 
@@ -505,10 +478,8 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             List<TelefonoRequest> telefonos
     ) {
-        Set<String> actuales = usuario.getTelefonos().stream()
-                .map(Telefono::getTelefono)
-                .map(String::trim)
-                .collect(Collectors.toSet());
+        Map<Long, Telefono> actuales = usuario.getTelefonos().stream()
+                .collect(Collectors.toMap(Telefono::getId, telefono -> telefono));
 
         Set<String> nuevos = new HashSet<>();
 
@@ -519,7 +490,10 @@ public class UsuarioServiceImpl implements UsuarioService {
                 throw new TelefonoDuplicadoException();
             }
 
-            if (actuales.contains(telefono)) {
+            Telefono identificado = request.getId() == null
+                    ? null
+                    : actuales.get(request.getId());
+            if (identificado != null && identificado.getTelefono().trim().equals(telefono)) {
                 continue;
             }
 
@@ -559,10 +533,8 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             List<CorreoRequest> correos
     ) {
-        Set<String> actuales = usuario.getEmails().stream()
-                .map(Email::getValor)
-                .map(this::normalizarCorreo)
-                .collect(Collectors.toSet());
+        Map<Long, Email> actuales = usuario.getEmails().stream()
+                .collect(Collectors.toMap(Email::getId, email -> email));
 
         Set<String> nuevos = new HashSet<>();
 
@@ -573,11 +545,18 @@ public class UsuarioServiceImpl implements UsuarioService {
                 throw new EmailDuplicadoException();
             }
 
-            if (actuales.contains(correo)) {
+            Email identificado = request.getId() == null
+                    ? null
+                    : actuales.get(request.getId());
+            if (identificado != null
+                    && normalizarCorreo(identificado.getValor()).equals(correo)) {
                 continue;
             }
 
-            if (emailRepository.existsByValorIgnoreCase(correo)) {
+            Email emailExistente = emailRepository.findByValorIgnoreCase(correo)
+                    .orElse(null);
+            if (emailExistente != null
+                    && !Objects.equals(emailExistente.getId(), request.getId())) {
                 throw new EmailDuplicadoException();
             }
         }
@@ -647,47 +626,6 @@ public class UsuarioServiceImpl implements UsuarioService {
     // DETECCIÓN DE CAMBIOS EN COLECCIONES
     // =========================================================
 
-    private boolean telefonosCambiaron(Usuario usuario, List<TelefonoRequest> nuevos) {
-        Set<String> actuales = usuario.getTelefonos().stream()
-                .map(t -> normalizarCategoria(t.getCategoria()) + "|" + t.getTelefono().trim())
-                .collect(Collectors.toSet());
-
-        Set<String> recibidos = nuevos.stream()
-                .map(t -> normalizarCategoria(t.getTipo()) + "|" + t.getValor().trim())
-                .collect(Collectors.toSet());
-
-        return !actuales.equals(recibidos);
-    }
-
-    private boolean correosCambiaron(Usuario usuario, List<CorreoRequest> nuevos) {
-        Set<String> actuales = usuario.getEmails().stream()
-                .map(e -> normalizarCategoria(e.getTipo()) + "|" + normalizarCorreo(e.getValor()))
-                .collect(Collectors.toSet());
-
-        Set<String> recibidos = nuevos.stream()
-                .map(e -> normalizarCategoria(e.getTipo()) + "|" + normalizarCorreo(e.getValor()))
-                .collect(Collectors.toSet());
-
-        return !actuales.equals(recibidos);
-    }
-
-    private boolean direccionesCambiaron(Usuario usuario, List<DireccionRequest> nuevas) {
-        Set<String> actuales = usuario.getDirecciones().stream()
-                .map(d -> normalizarCategoria(d.getCategoria())
-                        + "|" + d.getDireccion().trim().toLowerCase()
-                        + "|" + d.getCodigoPostal().getCodigoPostal().trim())
-                .collect(Collectors.toSet());
-
-        Set<String> recibidas = nuevas.stream()
-                .map(d -> normalizarCategoria(d.getTipo())
-                        + "|" + d.getValor().trim().toLowerCase()
-                        + "|" + d.getCodigoPostal().trim())
-                .collect(Collectors.toSet());
-
-        return !actuales.equals(recibidas);
-    }
-
-
     // =========================================================
     // VALIDAR QUE EXISTA EXACTAMENTE UN PRINCIPAL
     // =========================================================
@@ -738,6 +676,39 @@ public class UsuarioServiceImpl implements UsuarioService {
                             .build();
                     return codigoPostalRepository.save(nuevo);
                 });
+    }
+
+    private void validarIdsContactos(Usuario usuario, UsuarioUpdateRequestDTO dto) {
+        validarIds(
+                dto.getTelefonos().stream().map(TelefonoRequest::getId).toList(),
+                usuario.getTelefonos().stream().map(Telefono::getId).collect(Collectors.toSet()),
+                "teléfono"
+        );
+        validarIds(
+                dto.getCorreos().stream().map(CorreoRequest::getId).toList(),
+                usuario.getEmails().stream().map(Email::getId).collect(Collectors.toSet()),
+                "correo"
+        );
+        validarIds(
+                dto.getDirecciones().stream().map(DireccionRequest::getId).toList(),
+                usuario.getDirecciones().stream().map(Direccion::getId).collect(Collectors.toSet()),
+                "dirección"
+        );
+    }
+
+    private void validarIds(List<Long> idsRecibidos, Set<Long> idsDelUsuario, String contacto) {
+        Set<Long> idsUnicos = new HashSet<>();
+        for (Long id : idsRecibidos) {
+            if (id == null) {
+                continue;
+            }
+            if (!idsUnicos.add(id)) {
+                throw new IllegalArgumentException("El ID de " + contacto + " está repetido: " + id);
+            }
+            if (!idsDelUsuario.contains(id)) {
+                throw new IllegalArgumentException("El ID de " + contacto + " no pertenece al usuario");
+            }
+        }
     }
 
 

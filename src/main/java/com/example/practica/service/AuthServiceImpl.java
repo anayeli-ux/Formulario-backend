@@ -123,6 +123,8 @@ public class AuthServiceImpl
                                         .getRol()
                                         .getNombre()
                         )
+                        .nombre(usuario.getNombre())
+                        .primerApellido(usuario.getPrimerApellido())
                         .build();
 
 

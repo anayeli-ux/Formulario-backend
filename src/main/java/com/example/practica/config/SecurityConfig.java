@@ -237,7 +237,8 @@ public class SecurityConfig {
 
                                 .requestMatchers(
                                         HttpMethod.GET,
-                                        "/api/usuarios/me"
+                                        "/api/usuarios/me",
+                                        "/api/usuarios/me/resumen"
                                 )
                                 .authenticated()
 
