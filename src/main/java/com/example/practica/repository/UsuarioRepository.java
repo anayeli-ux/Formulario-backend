@@ -21,13 +21,17 @@ public interface UsuarioRepository
 
     Page<Usuario> findByFechaBajaIsNotNullOrderByIdAsc(Pageable pageable);
 
+    Page<Usuario> findByRolIdAndFechaBajaIsNullOrderByIdAsc(Long rolId, Pageable pageable);
+
+    Page<Usuario> findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(Long rolId, Pageable pageable);
+
     @Query(value = """
             select distinct u from Usuario u
             left join u.telefonos t
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is null and (
+            where u.fechaBaja is null and u.rol.id = 1 and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or
@@ -44,7 +48,7 @@ public interface UsuarioRepository
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is null and (
+            where u.fechaBaja is null and u.rol.id = 1 and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or
@@ -62,7 +66,7 @@ public interface UsuarioRepository
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is not null and (
+            where u.fechaBaja is not null and u.rol.id = 1 and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or
@@ -79,7 +83,7 @@ public interface UsuarioRepository
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is not null and (
+            where u.fechaBaja is not null and u.rol.id = 1 and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or

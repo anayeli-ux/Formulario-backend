@@ -32,6 +32,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UsuarioServiceImpl implements UsuarioService {
 
+    private static final Long ROLE_USER_ID = 1L;
+    private static final Long ROLE_ADMIN_ID = 2L;
+
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final TelefonoRepository telefonoRepository;
@@ -80,14 +83,23 @@ public class UsuarioServiceImpl implements UsuarioService {
         Page<Usuario> usuarios;
         if (termino.isEmpty()) {
             usuarios = eliminados
-                    ? usuarioRepository.findByFechaBajaIsNotNullOrderByIdAsc(pageable)
-                    : usuarioRepository.findByFechaBajaIsNullOrderByIdAsc(pageable);
+                    ? usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(ROLE_USER_ID, pageable)
+                    : usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(ROLE_USER_ID, pageable);
         } else {
             usuarios = eliminados
                     ? usuarioRepository.buscarEliminados(termino, pageable)
                     : usuarioRepository.buscarActivos(termino, pageable);
         }
         return usuarios.map(usuarioMapper::toResumenDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AdministradorResumenDTO> listarAdministradores(boolean eliminados, Pageable pageable) {
+        Page<Usuario> administradores = eliminados
+            ? usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(ROLE_ADMIN_ID, pageable)
+            : usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(ROLE_ADMIN_ID, pageable);
+        return administradores.map(usuarioMapper::toAdministradorResumenDTO);
     }
 
 

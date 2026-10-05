@@ -6,6 +6,7 @@ import com.example.practica.dto.TelefonoResponseDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioResumenDTO;
+import com.example.practica.dto.AdministradorResumenDTO;
 import com.example.practica.dto.UsuarioContactosDTO;
 import com.example.practica.dto.ContactoVisibleDTO;
 import com.example.practica.dto.UsuarioUpdateRequestDTO;
@@ -123,6 +124,18 @@ public class UsuarioMapper {
                         .map(Direccion::getCodigoPostal)
                         .filter(java.util.Objects::nonNull)
                         .map(CodigoPostal::getCodigoPostal)
+                        .findFirst().orElse(null))
+                .build();
+    }
+
+    public AdministradorResumenDTO toAdministradorResumenDTO(Usuario usuario) {
+        return AdministradorResumenDTO.builder()
+                .id(usuario.getId())
+                .nombre(usuario.getNombre())
+                .primerApellido(usuario.getPrimerApellido())
+                .correo(usuario.getEmails().stream()
+                        .filter(contacto -> "PRINCIPAL".equalsIgnoreCase(contacto.getTipo()))
+                        .map(Email::getValor)
                         .findFirst().orElse(null))
                 .build();
     }

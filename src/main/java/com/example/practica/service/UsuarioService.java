@@ -5,6 +5,7 @@ import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioResumenDTO;
 import com.example.practica.dto.UsuarioContactosDTO;
+import com.example.practica.dto.AdministradorResumenDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,6 +18,8 @@ public interface UsuarioService {
     List<UsuarioResponseDTO> listarUsuariosEliminados();
 
         Page<UsuarioResumenDTO> listarResumenes(boolean eliminados, String busqueda, Pageable pageable);
+
+        Page<AdministradorResumenDTO> listarAdministradores(boolean eliminados, Pageable pageable);
 
     UsuarioResponseDTO buscarUsuario(Long id);
 

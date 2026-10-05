@@ -2,6 +2,7 @@ package com.example.practica.controller;
 
 import com.example.practica.dto.CorreoResponseDTO;
 import com.example.practica.dto.UsuarioContactosDTO;
+import com.example.practica.dto.AdministradorResumenDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioResumenDTO;
@@ -55,6 +56,15 @@ public class UsuarioController {
                         @RequestParam(defaultValue = "") String search) {
                 Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
                 return ResponseEntity.ok(service.listarResumenes(true, search, pageable));
+        }
+
+        @GetMapping("/administradores")
+        public ResponseEntity<Page<AdministradorResumenDTO>> listarAdministradores(
+                        @RequestParam(defaultValue = "false") boolean eliminados,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "5") int size) {
+                Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
+                return ResponseEntity.ok(service.listarAdministradores(eliminados, pageable));
         }
 
         // =====================================================

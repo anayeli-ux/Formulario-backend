@@ -22,6 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -34,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceImplTest {
@@ -128,6 +132,30 @@ class UsuarioServiceImplTest {
         ));
 
         assertThrows(IllegalArgumentException.class, () -> service.actualizarUsuario(7L, dto));
+    }
+
+    @Test
+    void separatesPaginatedUserListsByRoleId() {
+        Pageable pageable = PageRequest.of(0, 5);
+        Page<Usuario> emptyPage = Page.empty(pageable);
+        when(usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(1L, pageable))
+                .thenReturn(emptyPage);
+        when(usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(1L, pageable))
+                .thenReturn(emptyPage);
+        when(usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(2L, pageable))
+                .thenReturn(emptyPage);
+        when(usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(2L, pageable))
+                .thenReturn(emptyPage);
+
+        service.listarResumenes(false, "", pageable);
+        service.listarResumenes(true, "", pageable);
+        service.listarAdministradores(false, pageable);
+        service.listarAdministradores(true, pageable);
+
+        verify(usuarioRepository).findByRolIdAndFechaBajaIsNullOrderByIdAsc(1L, pageable);
+        verify(usuarioRepository).findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(1L, pageable);
+        verify(usuarioRepository).findByRolIdAndFechaBajaIsNullOrderByIdAsc(2L, pageable);
+        verify(usuarioRepository).findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(2L, pageable);
     }
 
     private Usuario usuarioConContactos() {
