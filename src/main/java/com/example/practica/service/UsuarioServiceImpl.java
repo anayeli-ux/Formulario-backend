@@ -32,9 +32,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UsuarioServiceImpl implements UsuarioService {
 
-    private static final Long ROLE_USER_ID = 1L;
-    private static final Long ROLE_ADMIN_ID = 2L;
-
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final TelefonoRepository telefonoRepository;
@@ -47,61 +44,22 @@ public class UsuarioServiceImpl implements UsuarioService {
     private final PasswordEncoder passwordEncoder;
 
 
-    // =========================================================
-    // LISTAR ACTIVOS
-    // =========================================================
-
     @Override
     @Transactional(readOnly = true)
-    public List<UsuarioResponseDTO> listarUsuarios() {
-        return usuarioRepository
-                .findByFechaBajaIsNullOrderByIdAsc()
-                .stream()
-                .map(usuarioMapper::toResponseDTO)
-                .toList();
-    }
-
-
-    // =========================================================
-    // LISTAR ELIMINADOS
-    // =========================================================
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UsuarioResponseDTO> listarUsuariosEliminados() {
-        return usuarioRepository
-                .findByFechaBajaIsNotNullOrderByIdAsc()
-                .stream()
-                .map(usuarioMapper::toResponseDTO)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<UsuarioResumenDTO> listarResumenes(boolean eliminados, String busqueda, Pageable pageable) {
+    public Page<UsuarioResumenDTO> listarResumenes(boolean eliminados, String busqueda, Pageable pageable, Long rolId) {
         String termino = busqueda == null ? "" : busqueda.trim();
         Page<Usuario> usuarios;
         if (termino.isEmpty()) {
             usuarios = eliminados
-                    ? usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(ROLE_USER_ID, pageable)
-                    : usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(ROLE_USER_ID, pageable);
+                    ? usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(rolId, pageable)
+                    : usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(rolId, pageable);
         } else {
             usuarios = eliminados
-                    ? usuarioRepository.buscarEliminados(termino, pageable)
-                    : usuarioRepository.buscarActivos(termino, pageable);
+                    ? usuarioRepository.buscarEliminados(termino, rolId, pageable)
+                    : usuarioRepository.buscarActivos(termino, rolId, pageable);
         }
         return usuarios.map(usuarioMapper::toResumenDTO);
     }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<AdministradorResumenDTO> listarAdministradores(boolean eliminados, Pageable pageable) {
-        Page<Usuario> administradores = eliminados
-            ? usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(ROLE_ADMIN_ID, pageable)
-            : usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(ROLE_ADMIN_ID, pageable);
-        return administradores.map(usuarioMapper::toAdministradorResumenDTO);
-    }
-
 
     // =========================================================
     // BUSCAR POR ID
@@ -115,12 +73,6 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .orElseThrow(() -> new UsuarioNoEncontradoException(id));
 
         return usuarioMapper.toResponseDTO(usuario);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UsuarioContactosDTO buscarContactos(Long id) {
-        return usuarioMapper.toContactosDTO(buscarUsuario(id));
     }
 
 
@@ -152,6 +104,12 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional
     public UsuarioResponseDTO crearUsuario(UsuarioRequestDTO dto) {
+        return crearUsuario(dto, false);
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponseDTO crearUsuario(UsuarioRequestDTO dto, boolean administradorAutorizado) {
         validarEdad(dto.getFechaNacimiento());
         validarCategoriasPrincipales(dto.getTelefonos(), dto.getCorreos(), dto.getDirecciones());
 
@@ -159,14 +117,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         validarCorreosNuevos(dto.getCorreos());
         validarDirecciones(dto.getDirecciones());
 
-        Rol rolUser = rolRepository
-                .findByNombre("USER")
-                .orElseThrow(() -> new IllegalStateException("El rol USER no existe en la base de datos"));
+        String nombreRol = administradorAutorizado && dto.getRol() != null
+            ? dto.getRol()
+            : "USER";
+        Rol rolAsignado = obtenerRol(nombreRol);
 
         Usuario usuario = usuarioMapper.toEntity(dto);
 
         usuario.setPassword(passwordEncoder.encode(dto.getPassword()));
-        usuario.setRol(rolUser);
+        usuario.setRol(rolAsignado);
         usuario.setFechaBaja(null);
 
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
@@ -180,12 +139,18 @@ public class UsuarioServiceImpl implements UsuarioService {
 
 
     // =========================================================
-    // ACTUALIZAR USUARIO (HTTP 204 - VOID)
+    // ACTUALIZAR USUARIO
     // =========================================================
 
     @Override
     @Transactional
-    public void actualizarUsuario(Long id, UsuarioUpdateRequestDTO dto) {
+    public UsuarioResponseDTO actualizarUsuario(Long id, UsuarioUpdateRequestDTO dto) {
+        return actualizarUsuario(id, dto, false);
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponseDTO actualizarUsuario(Long id, UsuarioUpdateRequestDTO dto, boolean administradorAutorizado) {
 
         Usuario usuario = usuarioRepository
                 .findByIdAndFechaBajaIsNull(id)
@@ -200,6 +165,10 @@ public class UsuarioServiceImpl implements UsuarioService {
         validarDireccionesActualizacion(usuario, dto.getDirecciones());
 
         usuarioMapper.updateEntity(usuario, dto);
+
+        if (administradorAutorizado && dto.getRol() != null) {
+            usuario.setRol(obtenerRol(dto.getRol()));
+        }
 
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             boolean mismaPassword = passwordEncoder.matches(
@@ -218,8 +187,12 @@ public class UsuarioServiceImpl implements UsuarioService {
         actualizarCorreosDiferencial(usuario, dto.getCorreos());
         actualizarDireccionesDiferencial(usuario, dto.getDirecciones());
 
-        // Al ser una entidad administrada dentro de @Transactional,
-        // Hibernate aplicará dirty checking al finalizar sin necesidad de save() ni return.
+        return usuarioMapper.toResponseDTO(usuario);
+    }
+
+    private Rol obtenerRol(String nombre) {
+        return rolRepository.findByNombre(nombre)
+                .orElseThrow(() -> new IllegalStateException("El rol " + nombre + " no existe en la base de datos"));
     }
 
 

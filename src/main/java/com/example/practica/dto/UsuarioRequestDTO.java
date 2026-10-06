@@ -30,6 +30,9 @@ public class UsuarioRequestDTO {
     )
     private String primerApellido;
 
+        @Pattern(regexp = "USER|ADMIN", message = "El rol debe ser USER o ADMIN")
+        private String rol;
+
     @NotBlank(message = "La contraseña es obligatoria")
     @Size(
             min = 8,

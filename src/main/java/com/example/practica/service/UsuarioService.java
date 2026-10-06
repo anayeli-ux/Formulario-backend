@@ -4,26 +4,13 @@ import com.example.practica.dto.UsuarioUpdateRequestDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioResumenDTO;
-import com.example.practica.dto.UsuarioContactosDTO;
-import com.example.practica.dto.AdministradorResumenDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-
 public interface UsuarioService {
-
-    List<UsuarioResponseDTO> listarUsuarios();
-
-    List<UsuarioResponseDTO> listarUsuariosEliminados();
-
-        Page<UsuarioResumenDTO> listarResumenes(boolean eliminados, String busqueda, Pageable pageable);
-
-        Page<AdministradorResumenDTO> listarAdministradores(boolean eliminados, Pageable pageable);
+    Page<UsuarioResumenDTO> listarResumenes(boolean eliminados, String busqueda, Pageable pageable, Long rolId);
 
     UsuarioResponseDTO buscarUsuario(Long id);
-
-    UsuarioContactosDTO buscarContactos(Long id);
 
     // =====================================================
     // OBTENER MIS DATOS
@@ -35,10 +22,21 @@ public interface UsuarioService {
             UsuarioRequestDTO usuario
     );
 
-    void actualizarUsuario(
+        UsuarioResponseDTO crearUsuario(
+            UsuarioRequestDTO usuario,
+            boolean administradorAutorizado
+        );
+
+        UsuarioResponseDTO actualizarUsuario(
             Long id,
             UsuarioUpdateRequestDTO usuario
     );
+
+        UsuarioResponseDTO actualizarUsuario(
+            Long id,
+            UsuarioUpdateRequestDTO usuario,
+            boolean administradorAutorizado
+        );
 
     boolean eliminarUsuario(Long id);
 

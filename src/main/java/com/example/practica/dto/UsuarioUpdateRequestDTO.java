@@ -30,6 +30,9 @@ public class UsuarioUpdateRequestDTO {
     )
     private String primerApellido;
 
+        @Pattern(regexp = "USER|ADMIN", message = "El rol debe ser USER o ADMIN")
+        private String rol;
+
     /*
      * null o "" = conservar la contraseña actual.
      */

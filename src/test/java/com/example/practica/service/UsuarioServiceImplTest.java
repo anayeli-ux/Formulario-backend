@@ -3,12 +3,14 @@ package com.example.practica.service;
 import com.example.practica.dto.CorreoRequest;
 import com.example.practica.dto.DireccionRequest;
 import com.example.practica.dto.TelefonoRequest;
+import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioUpdateRequestDTO;
 import com.example.practica.mapper.UsuarioMapper;
 import com.example.practica.model.CodigoPostal;
 import com.example.practica.model.Direccion;
 import com.example.practica.model.Email;
 import com.example.practica.model.Telefono;
+import com.example.practica.model.Rol;
 import com.example.practica.model.Usuario;
 import com.example.practica.repository.CodigoPostalRepository;
 import com.example.practica.repository.DireccionRepository;
@@ -81,6 +83,7 @@ class UsuarioServiceImplTest {
     @Test
     void reconcilesContactsByIdAndAddsAndRemovesContacts() {
         Usuario usuario = usuarioConContactos();
+                Rol rolAdmin = Rol.builder().id(2L).nombre("ADMIN").build();
         Telefono telefonoExistente = usuario.getTelefonos().get(0);
         Email correoExistente = usuario.getEmails().get(0);
         Direccion direccionExistente = usuario.getDirecciones().get(0);
@@ -91,9 +94,13 @@ class UsuarioServiceImplTest {
         when(postaliaService.consultarCodigoPostal("22222")).thenReturn(null);
         when(codigoPostalRepository.findById("22222"))
                 .thenReturn(Optional.of(CodigoPostal.builder().codigoPostal("22222").build()));
+        when(rolRepository.findByNombre("ADMIN")).thenReturn(Optional.of(rolAdmin));
+        UsuarioUpdateRequestDTO request = requestConContactos();
+        request.setRol("ADMIN");
 
-        service.actualizarUsuario(7L, requestConContactos());
+        service.actualizarUsuario(7L, request, true);
 
+        assertSame(rolAdmin, usuario.getRol());
         assertEquals(2, usuario.getTelefonos().size());
         assertSame(telefonoExistente, usuario.getTelefonos().stream()
                 .filter(contacto -> Objects.equals(contacto.getId(), 11L)).findFirst().orElseThrow());
@@ -122,6 +129,53 @@ class UsuarioServiceImplTest {
     }
 
     @Test
+    void publicRegistrationCannotPromoteItselfEvenWhenRequestContainsAdminRole() {
+        Rol rolUser = Rol.builder().id(1L).nombre("USER").build();
+        Rol rolAdmin = Rol.builder().id(2L).nombre("ADMIN").build();
+        CodigoPostal codigoPostal = CodigoPostal.builder().codigoPostal("42000").build();
+        Usuario usuario = Usuario.builder()
+                .telefonos(new ArrayList<>())
+                .emails(new ArrayList<>())
+                .direcciones(new ArrayList<>())
+                .build();
+        Usuario usuarioAdmin = Usuario.builder()
+                .telefonos(new ArrayList<>())
+                .emails(new ArrayList<>())
+                .direcciones(new ArrayList<>())
+                .build();
+        UsuarioRequestDTO request = UsuarioRequestDTO.builder()
+                .nombre("Ana")
+                .primerApellido("Perez")
+                .password("Password!1")
+                .fechaNacimiento(LocalDate.of(1990, 1, 1))
+                .rol("ADMIN")
+                .telefonos(List.of(TelefonoRequest.builder().tipo("PRINCIPAL").valor("7711234567").build()))
+                .correos(List.of(CorreoRequest.builder().tipo("PRINCIPAL").valor("ana@example.com").build()))
+                .direcciones(List.of(DireccionRequest.builder().tipo("PRINCIPAL")
+                        .valor("Calle Principal 1").codigoPostal("42000").build()))
+                .build();
+
+        when(rolRepository.findByNombre("USER")).thenReturn(Optional.of(rolUser));
+        when(rolRepository.findByNombre("ADMIN")).thenReturn(Optional.of(rolAdmin));
+        when(usuarioMapper.toEntity(request)).thenReturn(usuario, usuarioAdmin);
+        when(telefonoRepository.existsByTelefono("7711234567")).thenReturn(false);
+        when(emailRepository.existsByValorIgnoreCase("ana@example.com")).thenReturn(false);
+        when(postaliaService.consultarCodigoPostal("42000")).thenReturn(null);
+        when(codigoPostalRepository.findById("42000")).thenReturn(Optional.of(codigoPostal));
+        when(usuarioRepository.save(usuario)).thenReturn(usuario);
+                when(usuarioRepository.save(usuarioAdmin)).thenReturn(usuarioAdmin);
+
+        service.crearUsuario(request);
+
+        assertSame(rolUser, usuario.getRol());
+        verify(rolRepository).findByNombre("USER");
+
+                service.crearUsuario(request, true);
+
+                assertSame(rolAdmin, usuarioAdmin.getRol());
+    }
+
+    @Test
     void rejectsContactIdThatDoesNotBelongToUser() {
         Usuario usuario = usuarioConContactos();
         when(usuarioRepository.findByIdAndFechaBajaIsNull(7L))
@@ -134,8 +188,8 @@ class UsuarioServiceImplTest {
         assertThrows(IllegalArgumentException.class, () -> service.actualizarUsuario(7L, dto));
     }
 
-    @Test
-    void separatesPaginatedUserListsByRoleId() {
+        @Test
+        void queriesPaginatedUserSummariesByRoleAndDeletionStatus() {
         Pageable pageable = PageRequest.of(0, 5);
         Page<Usuario> emptyPage = Page.empty(pageable);
         when(usuarioRepository.findByRolIdAndFechaBajaIsNullOrderByIdAsc(1L, pageable))
@@ -146,17 +200,16 @@ class UsuarioServiceImplTest {
                 .thenReturn(emptyPage);
         when(usuarioRepository.findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(2L, pageable))
                 .thenReturn(emptyPage);
-
-        service.listarResumenes(false, "", pageable);
-        service.listarResumenes(true, "", pageable);
-        service.listarAdministradores(false, pageable);
-        service.listarAdministradores(true, pageable);
+        service.listarResumenes(false, "", pageable, 1L);
+        service.listarResumenes(true, "", pageable, 1L);
+        service.listarResumenes(false, "", pageable, 2L);
+        service.listarResumenes(true, "", pageable, 2L);
 
         verify(usuarioRepository).findByRolIdAndFechaBajaIsNullOrderByIdAsc(1L, pageable);
         verify(usuarioRepository).findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(1L, pageable);
         verify(usuarioRepository).findByRolIdAndFechaBajaIsNullOrderByIdAsc(2L, pageable);
         verify(usuarioRepository).findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(2L, pageable);
-    }
+        }
 
     private Usuario usuarioConContactos() {
         Usuario usuario = Usuario.builder()

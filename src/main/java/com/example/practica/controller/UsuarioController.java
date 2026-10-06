@@ -1,8 +1,6 @@
 package com.example.practica.controller;
 
 import com.example.practica.dto.CorreoResponseDTO;
-import com.example.practica.dto.UsuarioContactosDTO;
-import com.example.practica.dto.AdministradorResumenDTO;
 import com.example.practica.dto.PageResponse;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
@@ -39,35 +37,16 @@ public class UsuarioController {
         public ResponseEntity<PageResponse<UsuarioResumenDTO>> listarUsuarios(
                 @RequestParam(defaultValue = "0") int page,
                 @RequestParam(defaultValue = "5") int size,
-                @RequestParam(defaultValue = "") String search) {
+                @RequestParam(defaultValue = "") String search,
+                @RequestParam(defaultValue = "USER") String rol,
+                @RequestParam(defaultValue = "false") boolean eliminados) {
                 Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
                 return ResponseEntity.ok(
-                        PageResponse.from(service.listarResumenes(false, search, pageable)));
-        }
-
-        // =====================================================
-        // LISTAR USUARIOS ELIMINADOS
-        // Solo ADMIN
-        // =====================================================
-
-        @GetMapping("/eliminados")
-        public ResponseEntity<PageResponse<UsuarioResumenDTO>> listarUsuariosEliminados(
-                @RequestParam(defaultValue = "0") int page,
-                @RequestParam(defaultValue = "5") int size,
-                @RequestParam(defaultValue = "") String search) {
-                Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
-                return ResponseEntity.ok(
-                        PageResponse.from(service.listarResumenes(true, search, pageable)));
-        }
-
-        @GetMapping("/administradores")
-        public ResponseEntity<PageResponse<AdministradorResumenDTO>> listarAdministradores(
-                @RequestParam(defaultValue = "false") boolean eliminados,
-                @RequestParam(defaultValue = "0") int page,
-                @RequestParam(defaultValue = "5") int size) {
-                Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
-                return ResponseEntity.ok(
-                        PageResponse.from(service.listarAdministradores(eliminados, pageable)));
+                        PageResponse.from(service.listarResumenes(
+                                eliminados,
+                                search,
+                                pageable,
+                                obtenerIdRol(rol))));
         }
 
         // =====================================================
@@ -107,11 +86,6 @@ public class UsuarioController {
         // Solo ADMIN
         // =====================================================
 
-        @GetMapping("/{id}/contactos")
-        public ResponseEntity<UsuarioContactosDTO> buscarContactos(@PathVariable Long id) {
-                return ResponseEntity.ok(service.buscarContactos(id));
-        }
-
         @GetMapping("/{id}")
         public ResponseEntity<UsuarioResponseDTO> buscarUsuario(
                 @PathVariable Long id) {
@@ -127,9 +101,11 @@ public class UsuarioController {
 
         @PostMapping
         public ResponseEntity<UsuarioResponseDTO> crearUsuario(
-                @Valid @RequestBody UsuarioRequestDTO usuario) {
+                @Valid @RequestBody UsuarioRequestDTO usuario,
+                Authentication authentication) {
 
-                UsuarioResponseDTO creado = service.crearUsuario(usuario);
+                boolean administradorAutorizado = esAdministrador(authentication);
+                UsuarioResponseDTO creado = service.crearUsuario(usuario, administradorAutorizado);
 
                 return ResponseEntity
                         .status(HttpStatus.CREATED)
@@ -142,13 +118,28 @@ public class UsuarioController {
         // =====================================================
 
         @PutMapping("/{id}")
-        public ResponseEntity<Void> actualizarUsuario(
+        public ResponseEntity<UsuarioResponseDTO> actualizarUsuario(
                 @PathVariable Long id,
-                @Valid @RequestBody UsuarioUpdateRequestDTO usuario) {
+                @Valid @RequestBody UsuarioUpdateRequestDTO usuario,
+                Authentication authentication) {
 
-                service.actualizarUsuario(id, usuario);
+                UsuarioResponseDTO actualizado = service.actualizarUsuario(
+                        id,
+                        usuario,
+                        esAdministrador(authentication));
 
-                return ResponseEntity.noContent().build();
+                return ResponseEntity.ok(actualizado);
+        }
+
+        private boolean esAdministrador(Authentication authentication) {
+                return authentication != null && authentication.getAuthorities().stream()
+                        .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        }
+
+        private Long obtenerIdRol(String rol) {
+                if ("USER".equalsIgnoreCase(rol)) return 1L;
+                if ("ADMIN".equalsIgnoreCase(rol)) return 2L;
+                throw new IllegalArgumentException("El rol debe ser USER o ADMIN");
         }
 
         // =====================================================

@@ -13,14 +13,6 @@ import java.util.Optional;
 public interface UsuarioRepository
         extends JpaRepository<Usuario, Long> {
 
-    List<Usuario> findByFechaBajaIsNullOrderByIdAsc();
-
-    List<Usuario> findByFechaBajaIsNotNullOrderByIdAsc();
-
-    Page<Usuario> findByFechaBajaIsNullOrderByIdAsc(Pageable pageable);
-
-    Page<Usuario> findByFechaBajaIsNotNullOrderByIdAsc(Pageable pageable);
-
     Page<Usuario> findByRolIdAndFechaBajaIsNullOrderByIdAsc(Long rolId, Pageable pageable);
 
     Page<Usuario> findByRolIdAndFechaBajaIsNotNullOrderByIdAsc(Long rolId, Pageable pageable);
@@ -31,7 +23,7 @@ public interface UsuarioRepository
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is null and u.rol.id = 1 and (
+            where u.fechaBaja is null and u.rol.id = :roleId and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or
@@ -48,7 +40,7 @@ public interface UsuarioRepository
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is null and u.rol.id = 1 and (
+            where u.fechaBaja is null and u.rol.id = :roleId and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or
@@ -58,7 +50,7 @@ public interface UsuarioRepository
                 cp.codigoPostal like concat('%', :term, '%')
             )
             """)
-    Page<Usuario> buscarActivos(@Param("term") String term, Pageable pageable);
+    Page<Usuario> buscarActivos(@Param("term") String term, @Param("roleId") Long roleId, Pageable pageable);
 
     @Query(value = """
             select distinct u from Usuario u
@@ -66,7 +58,7 @@ public interface UsuarioRepository
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is not null and u.rol.id = 1 and (
+            where u.fechaBaja is not null and u.rol.id = :roleId and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or
@@ -83,7 +75,7 @@ public interface UsuarioRepository
             left join u.emails e
             left join u.direcciones d
             left join d.codigoPostal cp
-            where u.fechaBaja is not null and u.rol.id = 1 and (
+            where u.fechaBaja is not null and u.rol.id = :roleId and (
                 cast(u.id as string) like concat('%', :term, '%') or
                 lower(u.nombre) like lower(concat('%', :term, '%')) or
                 lower(u.primerApellido) like lower(concat('%', :term, '%')) or
@@ -93,7 +85,7 @@ public interface UsuarioRepository
                 cp.codigoPostal like concat('%', :term, '%')
             )
             """)
-    Page<Usuario> buscarEliminados(@Param("term") String term, Pageable pageable);
+    Page<Usuario> buscarEliminados(@Param("term") String term, @Param("roleId") Long roleId, Pageable pageable);
 
     Optional<Usuario> findByIdAndFechaBajaIsNull(Long id);
 }

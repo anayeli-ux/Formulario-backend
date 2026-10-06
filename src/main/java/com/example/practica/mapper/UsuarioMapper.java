@@ -6,9 +6,6 @@ import com.example.practica.dto.TelefonoResponseDTO;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioResumenDTO;
-import com.example.practica.dto.AdministradorResumenDTO;
-import com.example.practica.dto.UsuarioContactosDTO;
-import com.example.practica.dto.ContactoVisibleDTO;
 import com.example.practica.dto.UsuarioUpdateRequestDTO;
 
 import com.example.practica.model.Direccion;
@@ -127,46 +124,6 @@ public class UsuarioMapper {
                         .findFirst().orElse(null))
                 .build();
     }
-
-    public AdministradorResumenDTO toAdministradorResumenDTO(Usuario usuario) {
-        return AdministradorResumenDTO.builder()
-                .id(usuario.getId())
-                .nombre(usuario.getNombre())
-                .primerApellido(usuario.getPrimerApellido())
-                .correo(usuario.getEmails().stream()
-                        .filter(contacto -> "PRINCIPAL".equalsIgnoreCase(contacto.getTipo()))
-                        .map(Email::getValor)
-                        .findFirst().orElse(null))
-                .build();
-    }
-
-        public UsuarioContactosDTO toContactosDTO(UsuarioResponseDTO usuario) {
-                return UsuarioContactosDTO.builder()
-                                .id(usuario.getId())
-                                .nombre(usuario.getNombre())
-                                .primerApellido(usuario.getPrimerApellido())
-                        .telefonos(usuario.getTelefonos().stream()
-                                .map(contacto -> ContactoVisibleDTO.builder()
-                                        .tipo(contacto.getTipo())
-                                        .valor(contacto.getValor())
-                                        .build())
-                                .toList())
-                        .correos(usuario.getCorreos().stream()
-                                .map(contacto -> ContactoVisibleDTO.builder()
-                                        .tipo(contacto.getTipo())
-                                        .valor(contacto.getValor())
-                                        .build())
-                                .toList())
-                        .direcciones(usuario.getDirecciones().stream()
-                                .map(contacto -> ContactoVisibleDTO.builder()
-                                        .tipo(contacto.getTipo())
-                                        .valor(contacto.getValor())
-                                        .codigoPostal(contacto.getCodigoPostal())
-                                        .build())
-                                .toList())
-                                .build();
-        }
-
 
     // =========================================================
     // TELEFONO -> RESPONSE
