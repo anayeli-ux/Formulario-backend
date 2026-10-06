@@ -3,13 +3,13 @@ package com.example.practica.controller;
 import com.example.practica.dto.CorreoResponseDTO;
 import com.example.practica.dto.UsuarioContactosDTO;
 import com.example.practica.dto.AdministradorResumenDTO;
+import com.example.practica.dto.PageResponse;
 import com.example.practica.dto.UsuarioRequestDTO;
 import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioResumenDTO;
 import com.example.practica.dto.UsuarioSesionDTO;
 import com.example.practica.dto.UsuarioUpdateRequestDTO;
 import com.example.practica.service.UsuarioService;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -36,12 +36,13 @@ public class UsuarioController {
         // =====================================================
 
         @GetMapping
-        public ResponseEntity<Page<UsuarioResumenDTO>> listarUsuarios(
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "5") int size,
-                        @RequestParam(defaultValue = "") String search) {
+        public ResponseEntity<PageResponse<UsuarioResumenDTO>> listarUsuarios(
+                @RequestParam(defaultValue = "0") int page,
+                @RequestParam(defaultValue = "5") int size,
+                @RequestParam(defaultValue = "") String search) {
                 Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
-                return ResponseEntity.ok(service.listarResumenes(false, search, pageable));
+                return ResponseEntity.ok(
+                        PageResponse.from(service.listarResumenes(false, search, pageable)));
         }
 
         // =====================================================
@@ -50,21 +51,23 @@ public class UsuarioController {
         // =====================================================
 
         @GetMapping("/eliminados")
-        public ResponseEntity<Page<UsuarioResumenDTO>> listarUsuariosEliminados(
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "5") int size,
-                        @RequestParam(defaultValue = "") String search) {
+        public ResponseEntity<PageResponse<UsuarioResumenDTO>> listarUsuariosEliminados(
+                @RequestParam(defaultValue = "0") int page,
+                @RequestParam(defaultValue = "5") int size,
+                @RequestParam(defaultValue = "") String search) {
                 Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
-                return ResponseEntity.ok(service.listarResumenes(true, search, pageable));
+                return ResponseEntity.ok(
+                        PageResponse.from(service.listarResumenes(true, search, pageable)));
         }
 
         @GetMapping("/administradores")
-        public ResponseEntity<Page<AdministradorResumenDTO>> listarAdministradores(
-                        @RequestParam(defaultValue = "false") boolean eliminados,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "5") int size) {
+        public ResponseEntity<PageResponse<AdministradorResumenDTO>> listarAdministradores(
+                @RequestParam(defaultValue = "false") boolean eliminados,
+                @RequestParam(defaultValue = "0") int page,
+                @RequestParam(defaultValue = "5") int size) {
                 Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
-                return ResponseEntity.ok(service.listarAdministradores(eliminados, pageable));
+                return ResponseEntity.ok(
+                        PageResponse.from(service.listarAdministradores(eliminados, pageable)));
         }
 
         // =====================================================
@@ -74,29 +77,29 @@ public class UsuarioController {
 
         @GetMapping("/me")
         public ResponseEntity<UsuarioResponseDTO> obtenerMiPerfil(
-                        Authentication authentication) {
+                Authentication authentication) {
 
                 String email = authentication.getName();
 
                 return ResponseEntity.ok(
-                                service.obtenerMiPerfil(email));
+                        service.obtenerMiPerfil(email));
         }
 
         @GetMapping("/me/resumen")
         public ResponseEntity<UsuarioSesionDTO> obtenerResumenSesion(Authentication authentication) {
                 UsuarioResponseDTO perfil = service.obtenerMiPerfil(authentication.getName());
                 String correo = perfil.getCorreos().stream()
-                                .filter(item -> "PRINCIPAL".equalsIgnoreCase(item.getTipo()))
-                                .map(CorreoResponseDTO::getValor)
-                                .findFirst()
-                                .orElse("");
+                        .filter(item -> "PRINCIPAL".equalsIgnoreCase(item.getTipo()))
+                        .map(CorreoResponseDTO::getValor)
+                        .findFirst()
+                        .orElse("");
                 return ResponseEntity.ok(UsuarioSesionDTO.builder()
-                                .id(perfil.getId())
-                                .nombre(perfil.getNombre())
-                                .primerApellido(perfil.getPrimerApellido())
-                                .email(correo)
-                                .rol(perfil.getRol())
-                                .build());
+                        .id(perfil.getId())
+                        .nombre(perfil.getNombre())
+                        .primerApellido(perfil.getPrimerApellido())
+                        .email(correo)
+                        .rol(perfil.getRol())
+                        .build());
         }
 
         // =====================================================
@@ -111,10 +114,10 @@ public class UsuarioController {
 
         @GetMapping("/{id}")
         public ResponseEntity<UsuarioResponseDTO> buscarUsuario(
-                        @PathVariable Long id) {
+                @PathVariable Long id) {
 
                 return ResponseEntity.ok(
-                                service.buscarUsuario(id));
+                        service.buscarUsuario(id));
         }
 
         // =====================================================
@@ -124,13 +127,13 @@ public class UsuarioController {
 
         @PostMapping
         public ResponseEntity<UsuarioResponseDTO> crearUsuario(
-                        @Valid @RequestBody UsuarioRequestDTO usuario) {
+                @Valid @RequestBody UsuarioRequestDTO usuario) {
 
                 UsuarioResponseDTO creado = service.crearUsuario(usuario);
 
                 return ResponseEntity
-                                .status(HttpStatus.CREATED)
-                                .body(creado);
+                        .status(HttpStatus.CREATED)
+                        .body(creado);
         }
 
         // =====================================================
@@ -140,8 +143,8 @@ public class UsuarioController {
 
         @PutMapping("/{id}")
         public ResponseEntity<Void> actualizarUsuario(
-                        @PathVariable Long id,
-                        @Valid @RequestBody UsuarioUpdateRequestDTO usuario) {
+                @PathVariable Long id,
+                @Valid @RequestBody UsuarioUpdateRequestDTO usuario) {
 
                 service.actualizarUsuario(id, usuario);
 
@@ -155,13 +158,13 @@ public class UsuarioController {
 
         @DeleteMapping("/{id}")
         public ResponseEntity<Void> eliminarUsuario(
-                        @PathVariable Long id) {
+                @PathVariable Long id) {
 
                 service.eliminarUsuario(id);
 
                 return ResponseEntity
-                                .noContent()
-                                .build();
+                        .noContent()
+                        .build();
         }
 
         // =====================================================
@@ -171,9 +174,9 @@ public class UsuarioController {
 
         @PutMapping("/{id}/reactivar")
         public ResponseEntity<UsuarioResponseDTO> reactivarUsuario(
-                        @PathVariable Long id) {
+                @PathVariable Long id) {
 
                 return ResponseEntity.ok(
-                                service.reactivarUsuario(id));
+                        service.reactivarUsuario(id));
         }
 }
