@@ -12,8 +12,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.web.csrf.CsrfToken;
 
+@Tag(name = "Autenticación y seguridad", description = "Documentación de endpoints de autenticación y seguridad")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -26,6 +33,12 @@ public class AuthController {
     // LOGIN
     // =====================================================
 
+    @Operation(summary = "Iniciar sesión", description = "Valida las credenciales y establece una cookie JWT HttpOnly.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Inicio de sesión correcto; cookie JWT HttpOnly enviada"),
+            @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
+            @ApiResponse(responseCode = "500", description = "Error inesperado del servidor")
+    })
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request
@@ -91,6 +104,12 @@ public class AuthController {
     // LOGOUT
     // =====================================================
 
+    @Operation(summary = "Cerrar sesión", description = "Envía una cookie JWT con duración cero para cerrar la sesión en el navegador.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Cookie JWT invalidada en el navegador"),
+            @ApiResponse(responseCode = "403", description = "Solicitud rechazada por protección CSRF"),
+            @ApiResponse(responseCode = "500", description = "Error inesperado del servidor")
+    })
     @PostMapping("/logout")
     public ResponseEntity<Void> logout() {
 
@@ -125,9 +144,14 @@ public class AuthController {
 // OBTENER TOKEN CSRF
 // =====================================================
 
+    @Operation(summary = "Obtener token CSRF", description = "Solicita la generación del token CSRF utilizado para proteger operaciones que modifican datos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Token CSRF inicializado"),
+            @ApiResponse(responseCode = "500", description = "Error inesperado del servidor")
+    })
     @GetMapping("/csrf")
     public ResponseEntity<Void> csrf(
-            CsrfToken csrfToken
+            @Parameter(hidden = true) CsrfToken csrfToken
     ) {
 
         // Fuerza la creación del token

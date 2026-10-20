@@ -1,3 +1,4 @@
+
 package com.example.practica.config;
 
 import lombok.RequiredArgsConstructor;
@@ -25,13 +26,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
 
     // =========================================================
     // PASSWORD ENCODER
@@ -39,10 +38,8 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-
         return new BCryptPasswordEncoder();
     }
-
 
     // =========================================================
     // CORS
@@ -54,14 +51,12 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-
         // Frontend Angular
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:4200"
                 )
         );
-
 
         // Métodos permitidos
         configuration.setAllowedMethods(
@@ -74,7 +69,6 @@ public class SecurityConfig {
                 )
         );
 
-
         // Headers permitidos
         configuration.setAllowedHeaders(
                 List.of(
@@ -84,10 +78,8 @@ public class SecurityConfig {
                 )
         );
 
-
         // Permite enviar cookies
         configuration.setAllowCredentials(true);
-
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
@@ -100,7 +92,6 @@ public class SecurityConfig {
         return source;
     }
 
-
     // =========================================================
     // SECURITY FILTER CHAIN
     // =========================================================
@@ -110,14 +101,12 @@ public class SecurityConfig {
             HttpSecurity http
     ) throws Exception {
 
-
         // =====================================================
         // CONFIGURACIÓN CSRF PARA ANGULAR
         // =====================================================
 
         CookieCsrfTokenRepository csrfTokenRepository =
                 CookieCsrfTokenRepository.withHttpOnlyFalse();
-
 
         /*
          * Spring utilizará:
@@ -131,12 +120,10 @@ public class SecurityConfig {
          * Angular puede trabajar con estos nombres.
          */
 
-
         CsrfTokenRequestAttributeHandler requestHandler =
                 new CsrfTokenRequestAttributeHandler();
 
         requestHandler.setCsrfRequestAttributeName(null);
-
 
         http
 
@@ -160,14 +147,14 @@ public class SecurityConfig {
                                  * realizarse antes de que exista
                                  * una sesión autenticada.
                                  *
-                                 * Por ahora excluimos estos endpoints.
+                                 * Conservamos las excepciones
+                                 * existentes.
                                  */
                                 .ignoringRequestMatchers(
                                         "/api/auth/login",
                                         "/api/usuarios"
                                 )
                 )
-
 
                 // =================================================
                 // CORS
@@ -178,7 +165,6 @@ public class SecurityConfig {
                                 corsConfigurationSource()
                         )
                 )
-
 
                 // =================================================
                 // SIN SESIÓN HTTP DE SERVIDOR
@@ -191,7 +177,6 @@ public class SecurityConfig {
                                 )
                 )
 
-
                 // =================================================
                 // AUTORIZACIÓN
                 // =================================================
@@ -199,6 +184,19 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth
 
+                                // ---------------------------------
+                                // SWAGGER / OPENAPI - NUEVO
+                                // ---------------------------------
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/swagger-ui.html",
+                                        "/swagger-ui/**",
+                                        "/v3/api-docs",
+                                        "/v3/api-docs/**",
+                                        "/v3/api-docs.yaml"
+                                )
+                                .permitAll()
 
                                 // ---------------------------------
                                 // LOGIN Y LOGOUT
@@ -208,7 +206,6 @@ public class SecurityConfig {
                                         "/api/auth/**"
                                 )
                                 .permitAll()
-
 
                                 // ---------------------------------
                                 // REGISTRO PÚBLICO
@@ -220,7 +217,6 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
-
                                 // ---------------------------------
                                 // POSTALIA
                                 // ---------------------------------
@@ -229,7 +225,6 @@ public class SecurityConfig {
                                         "/api/postalia/**"
                                 )
                                 .permitAll()
-
 
                                 // ---------------------------------
                                 // PERFIL
@@ -242,7 +237,6 @@ public class SecurityConfig {
                                 )
                                 .authenticated()
 
-
                                 // ---------------------------------
                                 // ADMINISTRACIÓN
                                 // ---------------------------------
@@ -252,7 +246,6 @@ public class SecurityConfig {
                                 )
                                 .hasRole("ADMIN")
 
-
                                 // ---------------------------------
                                 // RESTO
                                 // ---------------------------------
@@ -260,7 +253,6 @@ public class SecurityConfig {
                                 .anyRequest()
                                 .authenticated()
                 )
-
 
                 // =================================================
                 // JWT FILTER
@@ -270,7 +262,6 @@ public class SecurityConfig {
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 );
-
 
         return http.build();
     }
