@@ -1,7 +1,9 @@
 package com.example.practica.controller;
 
+import com.example.practica.dto.ApiResult;
 import com.example.practica.dto.LoginRequest;
 import com.example.practica.dto.LoginResponse;
+import com.example.practica.factory.ApiResponseFactory;
 import com.example.practica.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -40,7 +42,7 @@ public class AuthController {
             @ApiResponse(responseCode = "500", description = "Error inesperado del servidor")
     })
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
+    public ResponseEntity<ApiResult<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
 
@@ -96,7 +98,12 @@ public class AuthController {
                         HttpHeaders.SET_COOKIE,
                         cookie.toString()
                 )
-                .body(response);
+                .body(
+                        ApiResponseFactory.success(
+                                "Inicio de sesión exitoso",
+                                response
+                        )
+                );
     }
 
 
@@ -154,7 +161,7 @@ public class AuthController {
             @Parameter(hidden = true) CsrfToken csrfToken
     ) {
 
-        // Fuerza la creación del token
+        // Fuerza la creación del token ok ok sisii byy
         csrfToken.getToken();
 
         return ResponseEntity.ok().build();

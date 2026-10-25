@@ -1,6 +1,8 @@
 package com.example.practica.controller;
 
+import com.example.practica.dto.ApiResult;
 import com.example.practica.dto.PostaliaResponse;
+import com.example.practica.factory.ApiResponseFactory;
 import com.example.practica.service.PostaliaService;
 
 import org.springframework.http.ResponseEntity;
@@ -38,7 +40,7 @@ public class PostaliaController {
             @ApiResponse(responseCode = "500", description = "Error inesperado del servidor")
     })
     @GetMapping("/{codigoPostal}")
-    public ResponseEntity<PostaliaResponse>
+    public ResponseEntity<ApiResult<PostaliaResponse>>
     consultarCodigoPostal(
             @Parameter(description = "Código postal mexicano de cinco dígitos", example = "42000") @PathVariable String codigoPostal
     ) {
@@ -55,7 +57,11 @@ public class PostaliaController {
                                 codigoPostal
                         );
 
-        return ResponseEntity.ok(respuesta
+        return ResponseEntity.ok(
+                ApiResponseFactory.success(
+                        "Código postal consultado correctamente",
+                        respuesta
+                )
         );
     }
 }

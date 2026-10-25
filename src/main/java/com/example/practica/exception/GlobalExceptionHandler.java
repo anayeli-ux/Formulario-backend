@@ -1,5 +1,8 @@
 package com.example.practica.exception;
 
+import com.example.practica.dto.ApiResult;
+import com.example.practica.factory.ApiResponseFactory;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -7,7 +10,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,13 +21,12 @@ public class GlobalExceptionHandler {
     // =====================================================
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>>
-    handleValidationErrors(
+    public ResponseEntity<ApiResult<Object>> handleValidationErrors(
             MethodArgumentNotValidException ex
     ) {
 
-        Map<String, String> camposConError =
-                new HashMap<>();
+        // Almacena el nombre del campo y su mensaje de error.
+        Map<String, String> camposConError = new HashMap<>();
 
         for (FieldError error :
                 ex.getBindingResult().getFieldErrors()) {
@@ -36,232 +37,181 @@ public class GlobalExceptionHandler {
             );
         }
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.BAD_REQUEST,
-                        "Datos inválidos"
-                );
-
-        body.put(
-                "errores",
-                camposConError
-        );
-
         return ResponseEntity
                 .badRequest()
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                "Datos inválidos",
+                                camposConError
+                        )
+                );
     }
-
 
     // =====================================================
     // USUARIO NO ENCONTRADO -> 404
     // =====================================================
 
     @ExceptionHandler(UsuarioNoEncontradoException.class)
-    public ResponseEntity<Map<String, Object>>
-    handleUsuarioNoEncontrado(
+    public ResponseEntity<ApiResult<Object>> handleUsuarioNoEncontrado(
             UsuarioNoEncontradoException ex
     ) {
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.NOT_FOUND,
-                        ex.getMessage()
-                );
-
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
 
     // =====================================================
     // CÓDIGO POSTAL NO ENCONTRADO -> 404
     // =====================================================
 
     @ExceptionHandler(CodigoPostalNoEncontradoException.class)
-    public ResponseEntity<Map<String, Object>>
-    handleCodigoPostalNoEncontrado(
+    public ResponseEntity<ApiResult<Object>> handleCodigoPostalNoEncontrado(
             CodigoPostalNoEncontradoException ex
     ) {
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.NOT_FOUND,
-                        ex.getMessage()
-                );
-
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
 
     // =====================================================
     // POSTALIA NO DISPONIBLE -> 503
     // =====================================================
 
     @ExceptionHandler(PostaliaNoDisponibleException.class)
-    public ResponseEntity<Map<String, Object>>
-    handlePostaliaNoDisponible(
+    public ResponseEntity<ApiResult<Object>> handlePostaliaNoDisponible(
             PostaliaNoDisponibleException ex
     ) {
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.SERVICE_UNAVAILABLE,
-                        ex.getMessage()
-                );
-
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
 
     // =====================================================
     // TELÉFONO DUPLICADO -> 409
     // =====================================================
 
     @ExceptionHandler(TelefonoDuplicadoException.class)
-    public ResponseEntity<Map<String, Object>>
-    handleTelefonoDuplicado(
+    public ResponseEntity<ApiResult<Object>> handleTelefonoDuplicado(
             TelefonoDuplicadoException ex
     ) {
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.CONFLICT,
-                        ex.getMessage()
-                );
-
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
 
     // =====================================================
     // EMAIL DUPLICADO -> 409
     // =====================================================
 
     @ExceptionHandler(EmailDuplicadoException.class)
-    public ResponseEntity<Map<String, Object>>
-    handleEmailDuplicado(
+    public ResponseEntity<ApiResult<Object>> handleEmailDuplicado(
             EmailDuplicadoException ex
     ) {
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.CONFLICT,
-                        ex.getMessage()
-                );
-
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
 
     // =====================================================
     // MENOR DE EDAD -> 400
     // =====================================================
 
     @ExceptionHandler(MenorDeEdadException.class)
-    public ResponseEntity<Map<String, Object>>
-    handleMenorDeEdad(
+    public ResponseEntity<ApiResult<Object>> handleMenorDeEdad(
             MenorDeEdadException ex
     ) {
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.BAD_REQUEST,
-                        ex.getMessage()
-                );
-
         return ResponseEntity
                 .badRequest()
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
 
     // =====================================================
     // INTENTAR REACTIVAR USUARIO ACTIVO -> 409
     // =====================================================
 
     @ExceptionHandler(UsuarioYaActivoException.class)
-    public ResponseEntity<Map<String, Object>>
-    handleUsuarioYaActivo(
+    public ResponseEntity<ApiResult<Object>> handleUsuarioYaActivo(
             UsuarioYaActivoException ex
     ) {
 
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.CONFLICT,
-                        ex.getMessage()
-                );
-
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
 
     // =====================================================
     // ERROR GENERAL -> 500
     // =====================================================
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>>
-    handleGeneral(
+    public ResponseEntity<ApiResult<Object>> handleGeneral(
             Exception ex
     ) {
 
-        /*
-         * Lo mostramos en consola para poder encontrar
-         * el error real durante desarrollo.
-         */
+        // Permite identificar el error real en la consola.
         ex.printStackTrace();
-
-        Map<String, Object> body =
-                errorBase(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Ocurrió un error inesperado"
-                );
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(body);
+                .body(
+                        ApiResponseFactory.error(
+                                "Ocurrió un error inesperado",
+                                null
+                        )
+                );
     }
-
-
-    // =====================================================
-    // ESTRUCTURA COMÚN
-    // =====================================================
-
-    private Map<String, Object> errorBase(
-            HttpStatus status,
-            String mensaje
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResult<Object>> handleIllegalArgument(
+            IllegalArgumentException ex
     ) {
-
-        Map<String, Object> body =
-                new HashMap<>();
-
-        body.put(
-                "timestamp",
-                LocalDateTime.now()
-        );
-
-        body.put(
-                "status",
-                status.value()
-        );
-
-        body.put(
-                "mensaje",
-                mensaje
-        );
-
-        return body;
+        return ResponseEntity
+                .badRequest()
+                .body(
+                        ApiResponseFactory.error(
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
 }

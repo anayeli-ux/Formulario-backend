@@ -1,5 +1,6 @@
 package com.example.practica.controller;
 
+import com.example.practica.dto.ApiResult;
 import com.example.practica.dto.CorreoResponseDTO;
 import com.example.practica.dto.PageResponse;
 import com.example.practica.dto.UsuarioRequestDTO;
@@ -7,6 +8,7 @@ import com.example.practica.dto.UsuarioResponseDTO;
 import com.example.practica.dto.UsuarioResumenDTO;
 import com.example.practica.dto.UsuarioSesionDTO;
 import com.example.practica.dto.UsuarioUpdateRequestDTO;
+import com.example.practica.factory.ApiResponseFactory;
 import com.example.practica.service.UsuarioService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,28 +41,29 @@ public class UsuarioController {
         // Solo ADMIN por SecurityConfig
         // =====================================================
 
-        @Operation(summary = "Listar usuarios", description = "Lista resúmenes de usuarios con paginación, búsqueda, rol y filtro de eliminados. Requiere rol ADMIN.")
-        @ApiResponses({
-                @ApiResponse(responseCode = "200", description = "Listado obtenido"),
-                @ApiResponse(responseCode = "400", description = "Parámetros inválidos, incluido un rol no permitido"),
-                @ApiResponse(responseCode = "401", description = "No autenticado"),
-                @ApiResponse(responseCode = "403", description = "Se requiere rol ADMIN"),
-                @ApiResponse(responseCode = "500", description = "Error interno del servidor")
-        })
         @GetMapping
-        public ResponseEntity<PageResponse<UsuarioResumenDTO>> listarUsuarios(
+        public ResponseEntity<ApiResult<PageResponse<UsuarioResumenDTO>>> listarUsuarios(
                 @RequestParam(defaultValue = "0") int page,
                 @RequestParam(defaultValue = "5") int size,
                 @RequestParam(defaultValue = "") String search,
                 @RequestParam(defaultValue = "USER") String rol,
                 @RequestParam(defaultValue = "false") boolean eliminados) {
+
                 Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), 5));
-                return ResponseEntity.ok(
-                        PageResponse.from(service.listarResumenes(
+
+                PageResponse<UsuarioResumenDTO> resultado = PageResponse.from(
+                        service.listarResumenes(
                                 eliminados,
                                 search,
                                 pageable,
-                                obtenerIdRol(rol))));
+                                obtenerIdRol(rol)));
+
+                return ResponseEntity.ok(
+                        ApiResponseFactory.success(
+                                "Usuarios obtenidos correctamente",
+                                resultado
+                        )
+                );
         }
 
         // =====================================================
@@ -76,13 +79,19 @@ public class UsuarioController {
                 @ApiResponse(responseCode = "500", description = "Error interno del servidor")
         })
         @GetMapping("/me")
-        public ResponseEntity<UsuarioResponseDTO> obtenerMiPerfil(
+        public ResponseEntity<ApiResult<UsuarioResponseDTO>> obtenerMiPerfil(
                 Authentication authentication) {
 
                 String email = authentication.getName();
 
+                UsuarioResponseDTO perfil = service.obtenerMiPerfil(email);
+
                 return ResponseEntity.ok(
-                        service.obtenerMiPerfil(email));
+                        ApiResponseFactory.success(
+                                "Perfil obtenido correctamente",
+                                perfil
+                        )
+                );
         }
 
         @Operation(summary = "Consultar resumen de sesión", description = "Obtiene los datos resumidos de la sesión del usuario autenticado.")
@@ -93,20 +102,31 @@ public class UsuarioController {
                 @ApiResponse(responseCode = "500", description = "Error interno del servidor")
         })
         @GetMapping("/me/resumen")
-        public ResponseEntity<UsuarioSesionDTO> obtenerResumenSesion(Authentication authentication) {
+        public ResponseEntity<ApiResult<UsuarioSesionDTO>> obtenerResumenSesion(
+                Authentication authentication) {
+
                 UsuarioResponseDTO perfil = service.obtenerMiPerfil(authentication.getName());
+
                 String correo = perfil.getCorreos().stream()
                         .filter(item -> "PRINCIPAL".equalsIgnoreCase(item.getTipo()))
                         .map(CorreoResponseDTO::getValor)
                         .findFirst()
                         .orElse("");
-                return ResponseEntity.ok(UsuarioSesionDTO.builder()
+
+                UsuarioSesionDTO resumen = UsuarioSesionDTO.builder()
                         .id(perfil.getId())
                         .nombre(perfil.getNombre())
                         .primerApellido(perfil.getPrimerApellido())
                         .email(correo)
                         .rol(perfil.getRol())
-                        .build());
+                        .build();
+
+                return ResponseEntity.ok(
+                        ApiResponseFactory.success(
+                                "Resumen de sesión obtenido correctamente",
+                                resumen
+                        )
+                );
         }
 
         // =====================================================
@@ -124,11 +144,17 @@ public class UsuarioController {
                 @ApiResponse(responseCode = "500", description = "Error interno del servidor")
         })
         @GetMapping("/{id}")
-        public ResponseEntity<UsuarioResponseDTO> buscarUsuario(
+        public ResponseEntity<ApiResult<UsuarioResponseDTO>> buscarUsuario(
                 @PathVariable Long id) {
 
+                UsuarioResponseDTO usuario = service.buscarUsuario(id);
+
                 return ResponseEntity.ok(
-                        service.buscarUsuario(id));
+                        ApiResponseFactory.success(
+                                "Usuario encontrado correctamente",
+                                usuario
+                        )
+                );
         }
 
         // =====================================================
@@ -144,7 +170,7 @@ public class UsuarioController {
                 @ApiResponse(responseCode = "500", description = "Error interno del servidor")
         })
         @PostMapping
-        public ResponseEntity<UsuarioResponseDTO> crearUsuario(
+        public ResponseEntity<ApiResult<UsuarioResponseDTO>> crearUsuario(
                 @Valid @RequestBody UsuarioRequestDTO usuario,
                 Authentication authentication) {
 
@@ -153,7 +179,12 @@ public class UsuarioController {
 
                 return ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .body(creado);
+                        .body(
+                                ApiResponseFactory.success(
+                                        "Usuario registrado correctamente",
+                                        creado
+                                )
+                        );
         }
 
         // =====================================================
@@ -172,7 +203,7 @@ public class UsuarioController {
                 @ApiResponse(responseCode = "500", description = "Error interno del servidor")
         })
         @PutMapping("/{id}")
-        public ResponseEntity<UsuarioResponseDTO> actualizarUsuario(
+        public ResponseEntity<ApiResult<UsuarioResponseDTO>> actualizarUsuario(
                 @PathVariable Long id,
                 @Valid @RequestBody UsuarioUpdateRequestDTO usuario,
                 Authentication authentication) {
@@ -182,7 +213,12 @@ public class UsuarioController {
                         usuario,
                         esAdministrador(authentication));
 
-                return ResponseEntity.ok(actualizado);
+                return ResponseEntity.ok(
+                        ApiResponseFactory.success(
+                                "Usuario actualizado correctamente",
+                                actualizado
+                        )
+                );
         }
 
         private boolean esAdministrador(Authentication authentication) {
@@ -203,7 +239,7 @@ public class UsuarioController {
 
         @Operation(summary = "Dar de baja a un usuario", description = "Realiza la baja lógica de un usuario. Requiere rol ADMIN.")
         @ApiResponses({
-                @ApiResponse(responseCode = "204", description = "Baja lógica realizada"),
+                @ApiResponse(responseCode = "200", description = "Baja lógica realizada"),
                 @ApiResponse(responseCode = "400", description = "Identificador inválido"),
                 @ApiResponse(responseCode = "401", description = "No autenticado"),
                 @ApiResponse(responseCode = "403", description = "Se requiere rol ADMIN"),
@@ -211,14 +247,17 @@ public class UsuarioController {
                 @ApiResponse(responseCode = "500", description = "Error interno del servidor")
         })
         @DeleteMapping("/{id}")
-        public ResponseEntity<Void> eliminarUsuario(
+        public ResponseEntity<ApiResult<Void>> eliminarUsuario(
                 @PathVariable Long id) {
 
                 service.eliminarUsuario(id);
 
-                return ResponseEntity
-                        .noContent()
-                        .build();
+                return ResponseEntity.ok(
+                        ApiResponseFactory.<Void>success(
+                                "Usuario dado de baja correctamente",
+                                null
+                        )
+                );
         }
 
         // =====================================================
@@ -237,10 +276,16 @@ public class UsuarioController {
                 @ApiResponse(responseCode = "500", description = "Error interno del servidor")
         })
         @PutMapping("/{id}/reactivar")
-        public ResponseEntity<UsuarioResponseDTO> reactivarUsuario(
+        public ResponseEntity<ApiResult<UsuarioResponseDTO>> reactivarUsuario(
                 @PathVariable Long id) {
 
+                UsuarioResponseDTO reactivado = service.reactivarUsuario(id);
+
                 return ResponseEntity.ok(
-                        service.reactivarUsuario(id));
+                        ApiResponseFactory.success(
+                                "Usuario reactivado correctamente",
+                                reactivado
+                        )
+                );
         }
 }

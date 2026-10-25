@@ -1,5 +1,7 @@
-
 package com.example.practica.config;
+
+import com.example.practica.factory.ApiResponseFactory;
+import tools.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -7,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -31,6 +35,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper;
 
     // =========================================================
     // PASSWORD ENCODER
@@ -252,6 +257,61 @@ public class SecurityConfig {
 
                                 .anyRequest()
                                 .authenticated()
+                )
+
+                // =================================================
+                // RESPUESTAS DE ERROR DE SPRING SECURITY
+                // =================================================
+
+                .exceptionHandling(exceptions -> exceptions
+
+                        // Usuario no autenticado -> 401
+                        .authenticationEntryPoint(
+                                (request, response, authException) -> {
+
+                                    response.setStatus(
+                                            HttpStatus.UNAUTHORIZED.value()
+                                    );
+
+                                    response.setContentType(
+                                            MediaType.APPLICATION_JSON_VALUE
+                                    );
+
+                                    response.setCharacterEncoding("UTF-8");
+
+                                    objectMapper.writeValue(
+                                            response.getWriter(),
+                                            ApiResponseFactory.error(
+                                                    "No estás autenticado",
+                                                    null
+                                            )
+                                    );
+                                }
+                        )
+
+                        // Usuario sin permisos -> 403
+                        .accessDeniedHandler(
+                                (request, response, accessDeniedException) -> {
+
+                                    response.setStatus(
+                                            HttpStatus.FORBIDDEN.value()
+                                    );
+
+                                    response.setContentType(
+                                            MediaType.APPLICATION_JSON_VALUE
+                                    );
+
+                                    response.setCharacterEncoding("UTF-8");
+
+                                    objectMapper.writeValue(
+                                            response.getWriter(),
+                                            ApiResponseFactory.error(
+                                                    "No tienes permisos para realizar esta operación",
+                                                    null
+                                            )
+                                    );
+                                }
+                        )
                 )
 
                 // =================================================
